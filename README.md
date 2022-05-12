@@ -1,2 +1,2 @@
 # my-cpp-lib
-Various utils and extentions for c++20 stdlib 
+Various utils and extensions for c++20 stdlib 
