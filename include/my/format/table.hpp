@@ -2,6 +2,7 @@
 #ifndef MY_TABLE_FORMAT_HPP
 #define MY_TABLE_FORMAT_HPP
 
+#include <cassert>
 #include <my/format/join.hpp>
 #include <my/format/symbols.hpp>
 #include <my/util/str_utils.hpp>
@@ -155,6 +156,21 @@ struct Table {
     }
 
     /**
+     * @brief Prints table into ostream using html table.
+     *
+     * @param os ostream reference
+     * @return ostream_t& reference to os
+     */
+    inline ostream_t& printHTML(ostream_t& os) const {
+        if (header_.empty() and body_.empty() and footer_.empty())
+            return os;
+        printHeaderHTML(os);
+        printBodyHTML(os);
+        printFooterHTML(os);
+        return os;
+    }
+
+    /**
      * @brief Prints table into std::cout. You can also use operator<<
      *
      * @return ostream_t& reference to std::cout
@@ -180,21 +196,23 @@ struct Table {
     }
 
    private:
+    // ASCII / UTF8 console printers
+
     inline auto printHeader(ostream_t& os) const {
         printFrontSeparator(os);
 
         if (header_.empty()) return;
 
         printRowHelper(os, header_);
-        printSeparator(os);
-
-        if (body_.empty()) {
-            printBackSeparator(os);
-            return;
+        if (not body_.empty() or
+            not footer_.empty()) {
+            printSeparator(os);
         }
     }
 
     auto printBody(ostream_t& os) const {
+        if (body_.empty()) return;
+
         if (not separate_each_) {
             for (auto&& row : body_) {
                 printRowHelper(os, row);
@@ -233,6 +251,38 @@ struct Table {
     inline auto printBackSeparator(ostream_t& os) const {
         //                       ─  ╰  ┴  ╯
         printSeparatorHelper(os, 0, 8, 9, 10);
+    }
+
+    // HTML printers
+    auto printHeaderHTML(ostream_t& os) const {
+        os << "<table>";
+        if (header_.empty()) return;
+
+        printRowHelperHTML(os, "th", header_);
+    }
+
+    auto printBodyHTML(ostream_t& os) const {
+        for (auto&& el : body_) {
+            printRowHelperHTML(os, "td", el);
+        }
+    }
+
+    auto printFooterHTML(ostream_t& os) const {
+        if ((footer_after_lines_ and footer_after_lines_ >= body_.size()) or
+            (footer_.empty() and not same_header_footer_)) {
+            os << "</table>";
+            return;
+        }
+        printRowHelperHTML(os, "th", same_header_footer_ ? header_ : footer_);
+        os << "</table>";
+    }
+
+    auto printRowHelperHTML(ostream_t& os, const Ch* tag, const std::vector<string_t>& row) const {
+        os << "<tr>";
+        for (auto&& el : row) {
+            os << "<" << tag << ">" << el << "</" << tag << ">";
+        }
+        os << "</tr>";
     }
 
     // helpers

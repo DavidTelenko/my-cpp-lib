@@ -11,7 +11,7 @@ namespace my {
 
 /**
  * @brief Makes lambda from any callable
- * 
+ *
  * @tparam Function callable
  */
 template <class Function>
@@ -73,13 +73,13 @@ struct reducer_from {
     using Func_ = my::make_member_function_t<Function>;
 
    public:
-    inline constexpr reducer_from(Function func)
+    inline constexpr explicit reducer_from(Function func)
         : func_(std::move(func)) {}
 
     template <class Accum, class... Args>
     requires std::invocable<Func_, std::add_lvalue_reference_t<Accum>,
                             Args...>
-    inline constexpr auto
+    inline constexpr void
     operator()(Accum &accum,
                Args &&...args) const
         noexcept(std::is_nothrow_invocable_v<
@@ -113,7 +113,7 @@ struct average {
  */
 template <std::integral Number>
 struct is_divisible {
-    explicit inline constexpr is_divisible(Number n)
+    inline constexpr explicit is_divisible(Number n)
         : n_(n) {}
 
     inline constexpr bool
@@ -132,7 +132,7 @@ struct is_divisible {
  */
 template <class T>
 struct equal_to_value {
-    constexpr equal_to_value(T value)
+    inline constexpr explicit equal_to_value(T value)
         : value_(std::move(value)) {}
 
     template <std::equality_comparable_with<T> U>
@@ -350,7 +350,7 @@ class back_inserter {
     template <my::iterable Container, std::common_with<
                                           my::value_t<Container>>
                                           T>
-    constexpr auto operator()(Container &container, T &&val) const {
+    constexpr void operator()(Container &container, T &&val) const {
         container.push_back(std::forward<T>(val));
     }
 };
@@ -364,7 +364,7 @@ class front_inserter {
     template <my::iterable Container, std::common_with<
                                           my::value_t<Container>>
                                           T>
-    constexpr auto operator()(Container &container, T &&val) const {
+    constexpr void operator()(Container &container, T &&val) const {
         container.push_front(std::forward<T>(val));
     }
 };
@@ -378,7 +378,7 @@ class inserter {
     template <my::iterable Container, std::common_with<
                                           my::value_t<Container>>
                                           T>
-    constexpr auto operator()(Container &container, T &&val) const {
+    constexpr void operator()(Container &container, T &&val) const {
         container.insert(std::forward<T>(val));
     }
 };
@@ -425,6 +425,8 @@ constexpr auto decide_inserter() noexcept {
         return my::array_inserter{};
     } else if (my::applicable_v<my::detail::call_push_front, Iterable>) {
         return my::front_inserter{};
+    } else {
+        return;
     }
 }
 
