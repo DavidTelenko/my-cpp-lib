@@ -417,10 +417,9 @@ auto tableObjects(const T& objects, Projections... proj) {
 
 template <my::iterable T>
 inline constexpr auto table(const T& val) {
-    if constexpr (my::is_iterable_v<T> and
-                  not my::is_associative_container_v<T>) {
+    if constexpr (not my::is_associative_container_v<T>) {
         return tableIterable(val);
-    } else if (my::is_associative_container_v<T>) {
+    } else {
         return tableMap(val);
     }
 }
