@@ -20,7 +20,8 @@ class ColorParser {
         {"brown", my::Color::Brown},
         {"black", my::Color::Black},
         {"gray", my::Color::Gray},
-        {"white", my::Color::White}};
+        {"white", my::Color::White},
+    };
 
     inline static std::map<std::string, my::Color> userColors{};
 

@@ -277,7 +277,8 @@ struct Table {
         os << "</table>";
     }
 
-    auto printRowHelperHTML(ostream_t& os, const Ch* tag, const std::vector<string_t>& row) const {
+    auto printRowHelperHTML(ostream_t& os, const Ch* tag,
+                            const std::vector<string_t>& row) const {
         os << "<tr>";
         for (auto&& el : row) {
             os << "<" << tag << ">" << el << "</" << tag << ">";

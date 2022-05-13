@@ -148,7 +148,7 @@ class join_range {
    public:
     using value_type = It;
 
-    explicit constexpr join_range(It begin, It end)
+    inline constexpr explicit join_range(It begin, It end)
         : b(std::move(begin)),
           e(std::move(end)) {}
 
@@ -204,7 +204,7 @@ class join_tuple {
    public:
     using value_type = T;
 
-    explicit constexpr join_tuple(const T& rng) : tuple(rng) {}
+    inline constexpr explicit join_tuple(const T& rng) : tuple(rng) {}
 
     template <class Ch, class Tr>
     friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,
@@ -254,7 +254,7 @@ class join_pair {
    public:
     using value_type = T;
 
-    explicit constexpr join_pair(const T& rng) : pair(rng) {}
+    inline constexpr explicit join_pair(const T& rng) : pair(rng) {}
 
     template <class Ch, class Tr>
     friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,
