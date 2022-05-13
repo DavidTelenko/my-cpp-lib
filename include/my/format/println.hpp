@@ -42,6 +42,11 @@ struct newline_printer : public printer_base<Ch, Tr> {
         return *this;
     }
 
+    auto& operator()() {
+        this->os_ << newline;
+        return *this;
+    }
+
     template <my::joinable<Ch, Tr> Arg>
     friend auto& operator<<(newline_printer& p, Arg&& val) {
         return p(std::forward<Arg>(val));
@@ -164,7 +169,7 @@ struct formatted_printer : public printer_base<Ch, Tr> {
         assert(printed and "Incorrect format: too many arguments for given format");
     }
 
-    const Ch* format_;
+    const Ch* format_{};
 };
 
 /**
