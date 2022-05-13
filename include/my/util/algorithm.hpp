@@ -195,13 +195,39 @@ inline constexpr Out transform(const Container &container, Out result,
                      std::move(f), begin(rest)...);
 }
 
-template <my::iterable Container, my::iterable Result,
-          class UnaryOperator, my::iterable... Containers>
+namespace detail {
+
+template <my::iterable Result, std::input_iterator InIt,
+          class UnaryOperator, class Inserter,
+          std::input_iterator... Iterators>
+constexpr auto transform_impl(InIt first, InIt last, Result &result,
+                              UnaryOperator f, Inserter insert,
+                              Iterators... rest) {
+    for (; first != last; ++first, (++rest, ...)) {
+        std::invoke(insert, result, std::invoke(f, *first, *(rest)...));
+    }
+}
+
+};  // namespace detail
+
+template <my::iterable Result, my::iterable Container,
+          class UnaryOperator, class Inserter,
+          my::iterable... Containers>
 requires std::is_default_constructible_v<Result>
 constexpr Result transform(const Container &container, UnaryOperator f,
-                           const Containers &...rest) {
+                           Inserter insert, const Containers &...rest) {
+    using std::begin;
+    using std::end;
+    using std::size;
+
+    assert(((size(rest) <= size(container)) and ...));
+
     Result result{};
-    transform(container, begin(result), std::move(f), rest...);
+    if constexpr (my::reservable<Result>) {
+        result.reserve(size(container));
+    }
+    detail::transform_impl(begin(container), end(container), result,
+                           std::move(f), std::move(insert), begin(rest)...);
     return result;
 }
 

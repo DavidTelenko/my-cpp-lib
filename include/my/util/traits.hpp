@@ -91,9 +91,9 @@ concept associative_container = my::is_associative_container_v<T>;
 
 namespace detail {
 
-template <class T, class Ostream>
-using call_print_operator = decltype(std::declval<Ostream&>()
-                                     << std::declval<const T&>());
+    template <class T, class Ostream>
+    using call_print_operator = decltype(std::declval<Ostream&>()
+                                         << std::declval<const T&>());
 }  // namespace detail
 
 template <class T, class Ostream = std::ostream>
@@ -118,7 +118,7 @@ template <class T, class SizeT>
 inline constexpr bool has_reserve_v = has_reserve<T, SizeT>::value;
 
 template <class T, class SizeT = typename T::size_type>
-concept reservable = requires(T obj, SizeT size) {
+concept reservable = requires(std::remove_reference_t<T>& obj, SizeT size) {
     obj.reserve(size);
 };
 
@@ -126,11 +126,11 @@ concept reservable = requires(T obj, SizeT size) {
 
 namespace detail {
 
-template <class T, class U>
-using call_less_than = decltype(std::declval<T>() < std::declval<U>());
+    template <class T, class U>
+    using call_less_than = decltype(std::declval<T>() < std::declval<U>());
 
-template <class T, class U>
-using call_equals = decltype(std::declval<T>() == std::declval<U>());
+    template <class T, class U>
+    using call_equals = decltype(std::declval<T>() == std::declval<U>());
 
 }  // namespace detail
 
@@ -316,7 +316,11 @@ using call_push_front =
 // concepts
 
 template <class T, class Ostream = std::ostream>
-concept printable = my::has_print_operator_v<T, Ostream>;
+concept printable =
+    requires(std::remove_reference_t<Ostream>& os,
+             const std::remove_reference_t<T>& obj) {
+    { os << obj } -> std::same_as<std::remove_reference_t<Ostream>&>;
+};
 
 template <class T>
 concept iterator_concept = my::is_iterator_v<T>;
