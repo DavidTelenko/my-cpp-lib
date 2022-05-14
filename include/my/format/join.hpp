@@ -82,7 +82,8 @@ constexpr decltype(auto) join(const T& val) {
 }
 
 template <class Ch, my::joinable<Ch, std::char_traits<Ch>> T>
-inline constexpr decltype(auto) join(const T& val) {
+inline constexpr decltype(auto) join(const T& val) requires(
+    not std::same_as<Ch, T>) {
     return join<Ch, std::char_traits<Ch>, T>(val);
 }
 

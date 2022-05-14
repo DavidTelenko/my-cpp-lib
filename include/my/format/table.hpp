@@ -346,7 +346,7 @@ struct Table {
                   size_end = sizes_.end();
              begin != end and size_iter != size_end;
              ++begin, ++size_iter) {
-            const auto value = my::toString<Ch, Tr>(my::join<Ch>(*begin));
+            const auto value = my::toString<Ch, Tr>(my::join<Ch>(begin));
             const size_t value_size = value.size();
 
             if (value_size > *size_iter) {
