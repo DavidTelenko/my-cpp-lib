@@ -12,7 +12,7 @@ concept joinable =
     my::iterable<T> or
     my::is_tuple_v<T> or
     my::is_pair_v<T> or
-    my::is_iterator_v<T> or
+    std::input_or_output_iterator<T> or
     my::printable<T, std::basic_ostream<Ch, Tr>>;
 
 // forward declarations
@@ -64,32 +64,36 @@ struct delimiters<std::pair<Ts...>> {
  * @param val iterable, tuple or pair
  * @return join_## proxy
  */
-template <class Ch, class Tr, my::joinable<Ch, Tr> T>
-constexpr decltype(auto) join(const T& val) {
-    if constexpr (my::printable<T, std::basic_ostream<Ch, Tr>>) {
-        return val;
-    } else if constexpr (my::iterable<T>) {
+template <class Ch, class Tr, class T, class R = std::remove_reference_t<T>>
+requires my::joinable<R, Ch, Tr>
+constexpr decltype(auto) join(T&& val) {
+    if constexpr (my::printable<R, std::basic_ostream<Ch, Tr>>) {
+        return std::forward<R>(val);
+    } else if constexpr (my::iterable<R>) {
         using std::begin;
         using std::end;
-        return join_range(begin(val), end(val));
-    } else if constexpr (my::is_tuple_v<T>) {
-        return join_tuple(val);
-    } else if constexpr (my::is_pair_v<T>) {
-        return join_pair(val);
-    } else if constexpr (my::is_iterator_v<T>) {
-        return join<Ch, Tr>(*val);
+        return join_range(begin(std::forward<R>(val)),
+                          end(std::forward<R>(val)));
+    } else if constexpr (my::is_tuple_v<R>) {
+        return join_tuple(std::forward<R>(val));
+    } else if constexpr (my::is_pair_v<R>) {
+        return join_pair(std::forward<R>(val));
+    } else if constexpr (std::input_or_output_iterator<R>) {
+        return join<Ch, Tr>(*std::forward<R>(val));
     }
 }
 
-template <class Ch, my::joinable<Ch, std::char_traits<Ch>> T>
-inline constexpr decltype(auto) join(const T& val) requires(
+template <class Ch, class T, class R = std::remove_reference_t<T>>
+inline constexpr decltype(auto) join(T&& val) requires(
+    my::joinable<R, Ch, std::char_traits<Ch>> and
     not std::same_as<Ch, T>) {
-    return join<Ch, std::char_traits<Ch>, T>(val);
+    return join<Ch, std::char_traits<Ch>, R>(std::forward<R>(val));
 }
 
-template <my::joinable<char, std::char_traits<char>> T>
-inline constexpr decltype(auto) join(const T& val) {
-    return join<char, std::char_traits<char>, T>(val);
+template <class T, class R = std::remove_reference_t<T>>
+requires my::joinable<R, char, std::char_traits<char>>
+inline constexpr decltype(auto) join(T&& val) {
+    return join<char, std::char_traits<char>, R>(std::forward<R>(val));
 }
 
 /**
@@ -230,7 +234,7 @@ class join_tuple {
     auto& print(std::basic_ostream<Ch, Tr>& os) const {
         os << delimiters<T>::open;
         std::apply(
-            tuple, [&os]<class Arg, class... Args>(Arg && arg, Args && ... args) {
+            tuple, [&os]<class Arg, class... Args>(Arg&& arg, Args&&... args) {
                 os << join<Ch, Tr>(std::forward<Arg>(arg));
                 ((os << delimiters<T>::delim
                      << join<Ch, Tr>(std::forward<Args>(args))),

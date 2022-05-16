@@ -35,8 +35,9 @@ struct Table {
      * @return auto& chain reference to table object
      */
     template <my::joinable<Ch, Tr> Arg, my::joinable<Ch, Tr>... Args>
-    inline auto& pushRow(const Arg& arg, const Args&... args) {
-        body_.push_back(receiveRow_(arg, args...));
+    inline auto& pushRow(Arg&& arg, Args&&... args) {
+        body_.push_back(receiveRow_(std::forward<Arg>(arg),
+                                    std::forward<Args>(args)...));
         return *this;
     }
 
@@ -51,8 +52,9 @@ struct Table {
      * @return auto& chain reference to table object
      */
     template <my::joinable<Ch, Tr> Arg, my::joinable<Ch, Tr>... Args>
-    inline auto& header(const Arg& arg, const Args&... args) {
-        header_ = receiveRow_(arg, args...);
+    inline auto& header(Arg&& arg, Args&&... args) {
+        header_ = receiveRow_(std::forward<Arg>(arg),
+                              std::forward<Args>(args)...);
         return *this;
     }
 
@@ -67,8 +69,9 @@ struct Table {
      * @return auto& chain reference to table object
      */
     template <my::joinable<Ch, Tr> Arg, my::joinable<Ch, Tr>... Args>
-    inline auto& footer(const Arg& arg, const Args&... args) {
-        footer_ = receiveRow_(arg, args...);
+    inline auto& footer(Arg&& arg, Args&&... args) {
+        footer_ = receiveRow_(std::forward<Arg>(arg),
+                              std::forward<Args>(args)...);
         return *this;
     }
 
@@ -362,8 +365,9 @@ struct Table {
     template <class It, my::joinable<Ch, Tr> Arg,
               my::joinable<Ch, Tr>... Args>
     auto readVariadicRowImpl_(std::vector<string_t>& row, It size_iter,
-                              const Arg& arg, const Args&... args) {
-        const auto value = my::toString<Ch, Tr>(my::join<Ch, Tr>(arg));
+                              Arg&& arg, Args&&... args) {
+        const auto value = my::toString<Ch, Tr>(
+            my::join<Ch, Tr>(std::forward<Arg>(arg)));
         const size_t value_size = value.size();
 
         if (value_size > *size_iter) {
@@ -375,12 +379,13 @@ struct Table {
         if constexpr (sizeof...(args) == 0) {
             return;
         } else {
-            readVariadicRowImpl_(row, size_iter + 1, args...);
+            readVariadicRowImpl_(row, size_iter + 1,
+                                 std::forward<Args>(args)...);
         }
     }
 
     template <my::joinable<Ch, Tr>... Args>
-    auto readVariadicRow_(const Args&... args) {
+    auto readVariadicRow_(Args&&... args) {
         constexpr size_t size = sizeof...(args);
 
         if (sizes_.empty()) sizes_.resize(size);
@@ -391,19 +396,21 @@ struct Table {
 
         auto size_iter = sizes_.begin();
 
-        readVariadicRowImpl_(row, size_iter, args...);
+        readVariadicRowImpl_(row, size_iter, std::forward<Args>(args)...);
 
         return row;
     }
 
     template <my::joinable<Ch, Tr> Arg, my::joinable<Ch, Tr>... Args>
-    inline auto receiveRow_(const Arg& arg, const Args&... args) {
+    inline auto receiveRow_(Arg&& arg, Args&&... args) {
         if constexpr (sizeof...(args) == 0 and my::is_iterable_v<Arg>) {
             using std::begin;
             using std::end;
-            return readRow_(begin(arg), end(arg));
+            return readRow_(begin(std::forward<Arg>(arg)),
+                            end(std::forward<Arg>(arg)));
         } else {
-            return readVariadicRow_(arg, args...);
+            return readVariadicRow_(std::forward<Arg>(arg),
+                                    std::forward<Args>(args)...);
         }
     }
 
