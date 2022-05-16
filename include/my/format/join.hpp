@@ -7,13 +7,14 @@
 
 namespace my {
 
-template <class T, class Ch, class Tr>
+template <class T, class Ch, class Tr,
+          class R = std::remove_reference_t<T>>
 concept joinable =
-    my::iterable<T> or
-    my::is_tuple_v<T> or
-    my::is_pair_v<T> or
-    std::input_or_output_iterator<T> or
-    my::printable<T, std::basic_ostream<Ch, Tr>>;
+    my::iterable<R> or
+    my::is_tuple_v<R> or
+    my::is_pair_v<R> or
+    std::input_or_output_iterator<R> or
+    my::printable<R, std::basic_ostream<Ch, Tr>>;
 
 // forward declarations
 template <class I>
@@ -234,7 +235,7 @@ class join_tuple {
     auto& print(std::basic_ostream<Ch, Tr>& os) const {
         os << delimiters<T>::open;
         std::apply(
-            tuple, [&os]<class Arg, class... Args>(Arg&& arg, Args&&... args) {
+            tuple, [&os]<class Arg, class... Args>(Arg && arg, Args && ... args) {
                 os << join<Ch, Tr>(std::forward<Arg>(arg));
                 ((os << delimiters<T>::delim
                      << join<Ch, Tr>(std::forward<Args>(args))),

@@ -28,7 +28,7 @@ template <class Ch, class Tr,
           my::joinable<Ch, Tr>... Args>
 constexpr void
 printf(std::basic_ostream<Ch, Tr>& os,
-       const Ch* format, const Arg& arg, const Args&... args) {
+       const Ch* format, Arg&& arg, Args&&... args) {
     for (; *format != '\0'; ++format) {
         if (*format == '{') {
             if (*(format + 1) != '}') {
@@ -36,7 +36,8 @@ printf(std::basic_ostream<Ch, Tr>& os,
                 continue;
             }
             os << join<Ch, Tr>(arg);
-            return detail::printf(os, (format + 2), args...);
+            return detail::printf(os, (format + 2),
+                                  std::forward<Args>(args)...);
         }
         os << *format;
     }
@@ -54,8 +55,8 @@ printf(std::basic_ostream<Ch, Tr>& os,
  */
 template <my::joinable<char, std::char_traits<char>>... Args>
 inline constexpr void
-printf(const char* format, const Args&... args) {
-    detail::printf(std::cout, format, args...);
+printf(const char* format, Args&&... args) {
+    detail::printf(std::cout, format, std::forward<Args>(args)...);
 }
 
 /**
@@ -68,8 +69,8 @@ printf(const char* format, const Args&... args) {
  */
 template <my::joinable<wchar_t, std::char_traits<wchar_t>>... Args>
 inline constexpr void
-wprintf(const wchar_t* format, const Args&... args) {
-    detail::printf(std::wcout, format, args...);
+wprintf(const wchar_t* format, Args&&... args) {
+    detail::printf(std::wcout, format, std::forward<Args>(args)...);
 }
 
 /**
@@ -84,8 +85,8 @@ wprintf(const wchar_t* format, const Args&... args) {
 template <class Ch, class Tr, my::joinable<Ch, Tr>... Args>
 inline constexpr void
 printf(std::basic_ostream<Ch, Tr>& os,
-       const Ch* format, const Args&... args) {
-    detail::printf(os, format, args...);
+       const Ch* format, Args&&... args) {
+    detail::printf(os, format, std::forward<Args>(args)...);
 }
 
 /**
@@ -99,9 +100,9 @@ printf(std::basic_ostream<Ch, Tr>& os,
  */
 template <class Ch, my::joinable<Ch, std::char_traits<Ch>>... Args>
 inline std::basic_string<Ch, std::char_traits<Ch>>
-format(const Ch* format, const Args&... args) {
+format(const Ch* format, Args&&... args) {
     std::basic_stringstream<Ch, std::char_traits<Ch>> ss;
-    detail::printf(ss, format, args...);
+    detail::printf(ss, format, std::forward<Args>(args)...);
     return ss.str();
 }
 
