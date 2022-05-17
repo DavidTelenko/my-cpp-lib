@@ -50,7 +50,7 @@ struct fold_with {
 
     template <std::common_with<Identity>... Args>
     inline constexpr auto
-    operator()(Args &&...args) const noexcept {
+    operator()(Args &&...args) const {
         auto accum = identity_;
         return ((accum = std::invoke(func_, std::move(accum),
                                      std::forward<Args>(args))),
@@ -80,12 +80,7 @@ struct reducer_from {
     requires std::invocable<Func_, std::add_lvalue_reference_t<Accum>,
                             Args...>
     inline constexpr void
-    operator()(Accum &accum,
-               Args &&...args) const
-        noexcept(std::is_nothrow_invocable_v<
-                 Func_,
-                 std::add_lvalue_reference_t<Accum>,
-                 Args...>) {
+    operator()(Accum &accum, Args &&...args) const {
         (std::invoke(func_, accum, std::forward<Args>(args)), ...);
     }
 
@@ -137,7 +132,7 @@ struct equal_to_value {
 
     template <std::equality_comparable_with<T> U>
     inline constexpr bool
-    operator()(const U &e) const noexcept {
+    operator()(U &&e) const noexcept {
         return std::forward<U>(e) == value_;
     }
 
@@ -158,7 +153,7 @@ struct negate {
     template <class... Args>
     requires std::invocable<Predicate, Args...>
     inline constexpr bool operator()(Args &&...args) const noexcept {
-        return !std::invoke(predicate_, std::forward<Args>(args)...);
+        return not std::invoke(predicate_, std::forward<Args>(args)...);
     }
 
    private:
@@ -207,8 +202,8 @@ struct project {
     requires invocable_with_projection<Func_, Proj_, Args...>
     inline constexpr decltype(auto)
     operator()(Args &&...args) const noexcept {
-        return std::invoke(func_,
-                           std::invoke(proj_, std::forward<Args>(args))...);
+        return std::invoke(func_, std::invoke(proj_,
+                                              std::forward<Args>(args))...);
     }
 
    private:

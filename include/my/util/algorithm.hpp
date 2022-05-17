@@ -197,7 +197,7 @@ inline constexpr Out transform(const Container &container, Out result,
 
 namespace detail {
 
-template <my::iterable Result, std::input_iterator InIt,
+template <class Result, std::input_iterator InIt,
           class UnaryOperator, class Inserter,
           std::input_iterator... Iterators>
 constexpr auto transform_impl(InIt first, InIt last, Result &result,
@@ -210,7 +210,7 @@ constexpr auto transform_impl(InIt first, InIt last, Result &result,
 
 };  // namespace detail
 
-template <my::iterable Result, my::iterable Container,
+template <class Result, my::iterable Container,
           class UnaryOperator, class Inserter,
           my::iterable... Containers>
 requires std::is_default_constructible_v<Result>
@@ -220,10 +220,10 @@ constexpr Result transform(const Container &container, UnaryOperator f,
     using std::end;
     using std::size;
 
-    assert(((size(rest) <= size(container)) and ...));
+    assert(((size(rest) >= size(container)) and ...));
 
     Result result{};
-    if constexpr (my::reservable<Result>) {
+    if constexpr (my::reservable<Result, size_t>) {
         result.reserve(size(container));
     }
     detail::transform_impl(begin(container), end(container), result,
@@ -274,9 +274,12 @@ any(Container &&container, Predicate pred,
     Containers &&...rest) {
     using std::cbegin;
     using std::cend;
-    return any(cbegin(container), cend(container),
-               pred,
-               cbegin(rest)...);
+    using std::size;
+
+    assert(((size(rest) >= size(container)) and ...));
+    return my::any(cbegin(container), cend(container),
+                   pred,
+                   cbegin(rest)...);
 }
 
 /**
@@ -296,12 +299,8 @@ template <class Predicate, std::input_iterator InIt,
 constexpr InIt
 all(InIt first, InIt last, Predicate pred,
     Iterators... rest) {
-    for (; first != last; ++first, (++rest, ...)) {
-        if (not pred(*first, *(rest)...)) {
-            return false;
-        }
-    }
-    return true;
+    return not any(std::move(first), std::move(last), my::negate(pred),
+                   std::move(rest)...);
 }
 
 /**
@@ -322,9 +321,12 @@ all(Container &&container, Predicate pred,
     Containers &&...rest) {
     using std::cbegin;
     using std::cend;
-    return all(cbegin(container), cend(container),
-               pred,
-               cbegin(rest)...);
+    using std::size;
+
+    assert(((size(rest) >= size(container)) and ...));
+    return my::all(cbegin(container), cend(container),
+                   pred,
+                   cbegin(rest)...);
 }
 
 /**
@@ -374,9 +376,12 @@ reduce(Container &&container, Accum accum, NaryFunction f,
        Containers &&...rest) {
     using std::cbegin;
     using std::cend;
-    return reduce(cbegin(container), cend(container),
-                  std::move(accum), std::move(f),
-                  cbegin(rest)...);
+    using std::size;
+
+    assert(((size(rest) >= size(container)) and ...));
+    return my::reduce(cbegin(container), cend(container),
+                      std::move(accum), std::move(f),
+                      cbegin(rest)...);
 }
 
 }  // namespace my
