@@ -139,7 +139,7 @@ struct CartesianToPolarResult {
 };  // namespace detail
 
 /**
- * @brief Converts radius and angle into x and y in 
+ * @brief Converts radius and angle into x and y in
  * the cartesian coordinate system
  *
  * @tparam Number numeric type
@@ -154,13 +154,13 @@ polarToCartesian(Number radius, Number angle) {
 }
 
 /**
- * @brief  Converts x and y into radius and angle in 
+ * @brief  Converts x and y into radius and angle in
  * the polar coordinate system
  *
  * @tparam Number numeric type
  * @param x cartesian x coordinate
  * @param y cartesian y coordinate
- * @return CartesianToPolarResult<Number> structure with 
+ * @return CartesianToPolarResult<Number> structure with
  * .radius and .angle members
  */
 template <std::floating_point Number>
@@ -290,14 +290,14 @@ constexpr Number saturate(Number x) {
 }
 
 /**
- * @brief Computes inverse sqrt using safe version of quakes III 
+ * @brief Computes inverse sqrt using safe version of quakes III
  * Q_rsqrt function
  *
  * @param x number to compute inverse square root from
  * @return inv sqrt value
  */
 constexpr float qrsqrt(float x) noexcept {
-    static_assert(std::numeric_limits<float>::is_iec559);  
+    static_assert(std::numeric_limits<float>::is_iec559);
     // (enable only on IEEE 754)
 
     float y = std::bit_cast<float>(
@@ -310,7 +310,7 @@ constexpr float qrsqrt(float x) noexcept {
 }
 
 /**
- * @brief Computes inverse sqrt using std library, 
+ * @brief Computes inverse sqrt using std library,
  * effectively performs 1 / std::sqrt(x)
  *
  * @param x number to compute inverse square root from
@@ -395,7 +395,7 @@ constexpr Number mod(Number a, Number b) { return a - b * std::floor(a / b); }
  * @tparam Number any floating point number type
  * @param a first number
  * @param b second number
- * @param epsilon difference to check for 
+ * @param epsilon difference to check for
  * std::numeric_limits<Number>::epsilon by default
  * @return true if difference between numbers less than epsilon
  */
@@ -443,7 +443,7 @@ constexpr bool same(Number a, Number b,
      * from http://realtimecollisiondetection.net/blog/?p=89
      * ...The absolute tolerance test fails when a and b become large,
      * and the relative tolerance test fails when they become small.
-     * It is therefore desired to combine these two tests 
+     * It is therefore desired to combine these two tests
      * together in a single test...
      */
     constexpr Number diff = std::abs(a - b);
@@ -536,6 +536,19 @@ constexpr Number rect(Number x) {
     if (std::abs(x) < half) return 1.0;
     if (std::abs(x) > half) return 0.0;
     return half;
+}
+
+/**
+ * @brief Returns absolute difference between two numbers
+ *
+ * @tparam Number numeric type
+ * @param lhs first number
+ * @param rhs second number
+ * @return positive absolute difference of two numbers
+ */
+template <my::arithmetic Number = float>
+inline constexpr Number diff(Number lhs, Number rhs) {
+    return lhs < rhs ? rhs - lhs : lhs - rhs;
 }
 
 /**
