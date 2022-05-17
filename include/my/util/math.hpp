@@ -365,16 +365,35 @@ constexpr Number fact(Number n) {
     return result;
 }
 
+namespace detail {
+
+template <std::floating_point Number>
+struct FractResult {
+    Number integral;
+    Number fractional;
+
+    // this result can be casted down to fractional part
+    // but we cannot ignore result of modf
+    operator Number() const { return fractional; }
+};
+
+}  // namespace detail
+
 /**
- * @brief Computes fractional part of the number
- * @note glsl fract
+ * @brief Computes fractional and integral part of the number
+ * @note Result of this function has cast operator to fractional part
  *
  * @tparam Number any floating point number type
  * @param n number to take fractional part from
  * @return The fractional part of x. This is calculated as x - floor(x).
  */
 template <std::floating_point Number = float>
-constexpr Number fract(Number n) { return std::modf(n, nullptr); }
+constexpr detail::FractResult<Number> fract(Number n) {
+    Number integral;
+    Number fractional = std::modf(n, &integral);
+    return {.integral = integral,
+            .fractional = fractional};
+}
 
 /**
  * @brief Computes a modulo b
