@@ -149,8 +149,6 @@ inline auto& comma(std::basic_ostream<Ch, Tr>& os) {
  */
 template <class It>
 class join_range {
-    It b, e;
-
    public:
     using value_type = It;
 
@@ -177,17 +175,19 @@ class join_range {
     }
 
    private:
+    It _first, _last;
+
     template <class Ch, class Tr>
     constexpr auto& print(std::basic_ostream<Ch, Tr>& os) const {
         os << delimiters<It>::open;
 
-        if (b == e) {
+        if (_first == _last) {
             os << delimiters<It>::close;
             return os;
         }
 
-        auto it = b;
-        for (auto prev = std::prev(e); it != prev; ++it)
+        auto it = _first;
+        for (auto prev = std::prev(_last); it != prev; ++it)
             os << join<Ch, Tr>(*it) << delimiters<It>::delim;
         os << join<Ch, Tr>(*it);
 
@@ -205,8 +205,6 @@ class join_range {
  */
 template <class T>
 class join_tuple {
-    const T& tuple;
-
    public:
     using value_type = T;
 
@@ -231,11 +229,14 @@ class join_tuple {
     }
 
    private:
+    const T& _tuple;
+
     template <class Ch, class Tr>
     auto& print(std::basic_ostream<Ch, Tr>& os) const {
         os << delimiters<T>::open;
         std::apply(
-            tuple, [&os]<class Arg, class... Args>(Arg && arg, Args && ... args) {
+            _tuple, [&os]<class Arg, class... Args>(Arg && arg,
+                                                    Args && ... args) {
                 os << join<Ch, Tr>(std::forward<Arg>(arg));
                 ((os << delimiters<T>::delim
                      << join<Ch, Tr>(std::forward<Args>(args))),
@@ -255,8 +256,6 @@ class join_tuple {
  */
 template <class T>
 class join_pair {
-    const T& pair;
-
    public:
     using value_type = T;
 
@@ -281,12 +280,14 @@ class join_pair {
     }
 
    private:
+    const T& _pair;
+
     template <class Ch, class Tr>
     auto& print(std::basic_ostream<Ch, Tr>& os) const {
         os << delimiters<T>::open
-           << join<Ch, Tr>(pair.first)
+           << join<Ch, Tr>(_pair.first)
            << delimiters<T>::delim
-           << join<Ch, Tr>(pair.second)
+           << join<Ch, Tr>(_pair.second)
            << delimiters<T>::close;
         return os;
     }
