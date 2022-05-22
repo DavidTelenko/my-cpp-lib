@@ -36,7 +36,7 @@ struct Table {
      */
     template <my::joinable<Ch, Tr> Arg, my::joinable<Ch, Tr>... Args>
     inline auto& pushRow(Arg&& arg, Args&&... args) {
-        body_.push_back(receiveRow_(std::forward<Arg>(arg),
+        _body.push_back(receiveRow_(std::forward<Arg>(arg),
                                     std::forward<Args>(args)...));
         return *this;
     }
@@ -53,7 +53,7 @@ struct Table {
      */
     template <my::joinable<Ch, Tr> Arg, my::joinable<Ch, Tr>... Args>
     inline auto& header(Arg&& arg, Args&&... args) {
-        header_ = receiveRow_(std::forward<Arg>(arg),
+        _header = receiveRow_(std::forward<Arg>(arg),
                               std::forward<Args>(args)...);
         return *this;
     }
@@ -70,7 +70,7 @@ struct Table {
      */
     template <my::joinable<Ch, Tr> Arg, my::joinable<Ch, Tr>... Args>
     inline auto& footer(Arg&& arg, Args&&... args) {
-        footer_ = receiveRow_(std::forward<Arg>(arg),
+        _footer = receiveRow_(std::forward<Arg>(arg),
                               std::forward<Args>(args)...);
         return *this;
     }
@@ -81,7 +81,7 @@ struct Table {
      * @return auto& chain reference to table object
      */
     inline auto& popRow() {
-        body_.pop_back();
+        _body.pop_back();
         return *this;
     }
 
@@ -92,7 +92,7 @@ struct Table {
      * @return auto& chain reference to table object
      */
     inline auto& reserve(size_t n) {
-        body_.reserve(n);
+        _body.reserve(n);
         return *this;
     }
 
@@ -104,7 +104,7 @@ struct Table {
      * @return auto& chain reference to table object
      */
     inline auto& footerAfter(size_t lines) {
-        footer_after_lines_ = lines;
+        _footer_after_lines = lines;
         return *this;
     }
 
@@ -115,7 +115,7 @@ struct Table {
      * @return auto& chain reference to table object
      */
     inline auto& sameHeaderFooter() {
-        same_header_footer_ = !same_header_footer_;
+        _same_header_footer = !_same_header_footer;
         return *this;
     }
 
@@ -126,7 +126,7 @@ struct Table {
      * @return auto& chain reference to table object
      */
     inline auto& separateEach() {
-        separate_each_ = !separate_each_;
+        _separate_each = !_separate_each;
         return *this;
     }
 
@@ -139,7 +139,7 @@ struct Table {
      * @return auto& chain reference to table object
      */
     inline auto& style(my::Style style) {
-        style_ = style;
+        _style = style;
         return *this;
     }
 
@@ -150,7 +150,7 @@ struct Table {
      * @return ostream_t& reference to os
      */
     inline ostream_t& print(ostream_t& os) const {
-        if (header_.empty() and body_.empty() and footer_.empty())
+        if (_header.empty() and _body.empty() and _footer.empty())
             return os;
         printHeader(os);
         printBody(os);
@@ -165,7 +165,7 @@ struct Table {
      * @return ostream_t& reference to os
      */
     inline ostream_t& printHTML(ostream_t& os) const {
-        if (header_.empty() and body_.empty() and footer_.empty())
+        if (_header.empty() and _body.empty() and _footer.empty())
             return os;
         printHeaderHTML(os);
         printBodyHTML(os);
@@ -204,25 +204,25 @@ struct Table {
     inline auto printHeader(ostream_t& os) const {
         printFrontSeparator(os);
 
-        if (header_.empty()) return;
+        if (_header.empty()) return;
 
-        printRowHelper(os, header_);
-        if (not body_.empty() or
-            not footer_.empty()) {
+        printRowHelper(os, _header);
+        if (not _body.empty() or
+            not _footer.empty()) {
             printSeparator(os);
         }
     }
 
     auto printBody(ostream_t& os) const {
-        if (body_.empty()) return;
+        if (_body.empty()) return;
 
-        if (not separate_each_) {
-            for (auto&& row : body_) {
+        if (not _separate_each) {
+            for (auto&& row : _body) {
                 printRowHelper(os, row);
             }
         } else {
-            printRowHelper(os, body_.front());
-            for (auto&& row : body_ | std::views::drop(1)) {
+            printRowHelper(os, _body.front());
+            for (auto&& row : _body | std::views::drop(1)) {
                 printSeparator(os);
                 printRowHelper(os, row);
             }
@@ -230,18 +230,18 @@ struct Table {
     }
 
     auto printFooter(ostream_t& os) const {
-        if ((footer_after_lines_ and footer_after_lines_ >= body_.size()) or
-            (footer_.empty() and not same_header_footer_)) {
+        if ((_footer_after_lines and _footer_after_lines >= _body.size()) or
+            (_footer.empty() and not _same_header_footer)) {
             printBackSeparator(os);
             return;
         }
         printSeparator(os);
-        printRowHelper(os, same_header_footer_ ? header_ : footer_);
+        printRowHelper(os, _same_header_footer ? _header : _footer);
         printBackSeparator(os);
     }
 
     inline auto printFrontSeparator(ostream_t& os) const {
-        assert(not sizes_.empty());
+        assert(not _sizes.empty());
         //                       ─  ╭  ┬  ╮
         printSeparatorHelper(os, 0, 2, 3, 4);
     }
@@ -259,24 +259,24 @@ struct Table {
     // HTML printers
     auto printHeaderHTML(ostream_t& os) const {
         os << "<table>";
-        if (header_.empty()) return;
+        if (_header.empty()) return;
 
-        printRowHelperHTML(os, "th", header_);
+        printRowHelperHTML(os, "th", _header);
     }
 
     auto printBodyHTML(ostream_t& os) const {
-        for (auto&& el : body_) {
+        for (auto&& el : _body) {
             printRowHelperHTML(os, "td", el);
         }
     }
 
     auto printFooterHTML(ostream_t& os) const {
-        if ((footer_after_lines_ and footer_after_lines_ >= body_.size()) or
-            (footer_.empty() and not same_header_footer_)) {
+        if ((_footer_after_lines and _footer_after_lines >= _body.size()) or
+            (_footer.empty() and not _same_header_footer)) {
             os << "</table>";
             return;
         }
-        printRowHelperHTML(os, "th", same_header_footer_ ? header_ : footer_);
+        printRowHelperHTML(os, "th", _same_header_footer ? _header : _footer);
         os << "</table>";
     }
 
@@ -293,10 +293,10 @@ struct Table {
 
     inline auto
     printRowHelper(ostream_t& os, const std::vector<string_t>& row) const {
-        const auto dash = my::styles[static_cast<size_t>(style_)][1];  // │
+        const auto dash = my::styles[static_cast<size_t>(_style)][1];  // │
 
-        for (auto row_iter = begin(row), size_iter = begin(sizes_),
-                  row_end = end(row), size_end = end(sizes_);
+        for (auto row_iter = begin(row), size_iter = begin(_sizes),
+                  row_end = end(row), size_end = end(_sizes);
              row_iter != row_end and size_iter != size_end;
              ++row_iter, ++size_iter) {
             const auto element_size = row_iter->size();
@@ -316,20 +316,20 @@ struct Table {
                               size_t main, size_t corner1,
                               size_t inter, size_t corner2) const {
         const auto dash =
-            my::styles[static_cast<size_t>(style_)][main];
+            my::styles[static_cast<size_t>(_style)][main];
         const auto left_corner =
-            my::styles[static_cast<size_t>(style_)][corner1];
+            my::styles[static_cast<size_t>(_style)][corner1];
         const auto t_shape =
-            my::styles[static_cast<size_t>(style_)][inter];
+            my::styles[static_cast<size_t>(_style)][inter];
         const auto right_corner =
-            my::styles[static_cast<size_t>(style_)][corner2];
+            my::styles[static_cast<size_t>(_style)][corner2];
 
         os << left_corner;
-        print_n(os, sizes_.front() + pad, dash);
+        print_n(os, _sizes.front() + _pad, dash);
 
-        for (auto size : sizes_ | std::views::drop(1)) {
+        for (auto size : _sizes | std::views::drop(1)) {
             os << t_shape;
-            print_n(os, size + pad, dash);
+            print_n(os, size + _pad, dash);
         }
 
         os << right_corner << my::newline;
@@ -340,13 +340,13 @@ struct Table {
         const size_t size = std::distance(begin, end);
 
         assert(size);
-        if (sizes_.empty()) sizes_.resize(size);
+        if (_sizes.empty()) _sizes.resize(size);
 
         std::vector<string_t> row;
         row.reserve(size);
 
-        for (auto size_iter = sizes_.begin(),
-                  size_end = sizes_.end();
+        for (auto size_iter = _sizes.begin(),
+                  size_end = _sizes.end();
              begin != end and size_iter != size_end;
              ++begin, ++size_iter) {
             const auto value = my::toString<Ch, Tr>(my::join<Ch>(begin));
@@ -388,13 +388,13 @@ struct Table {
     auto readVariadicRow_(Args&&... args) {
         constexpr size_t size = sizeof...(args);
 
-        if (sizes_.empty()) sizes_.resize(size);
-        assert(sizes_.size() == size);
+        if (_sizes.empty()) _sizes.resize(size);
+        assert(_sizes.size() == size);
 
         std::vector<string_t> row;
         row.reserve(size);
 
-        auto size_iter = sizes_.begin();
+        auto size_iter = _sizes.begin();
 
         readVariadicRowImpl_(row, size_iter, std::forward<Args>(args)...);
 
@@ -421,17 +421,16 @@ struct Table {
                             n, std::forward<T>(val));
     }
 
-    std::vector<string_t> header_;
-    std::vector<std::vector<string_t>> body_;
-    std::vector<string_t> footer_;
-    std::vector<size_t> sizes_;
-    std::vector<string_t> current_row_;
+    std::vector<string_t> _header;
+    std::vector<std::vector<string_t>> _body;
+    std::vector<string_t> _footer;
+    std::vector<size_t> _sizes;
     //
-    my::Style style_ = my::Style::Curvy;
-    bool same_header_footer_ = false;
-    bool separate_each_ = false;
-    size_t footer_after_lines_ = 0;
-    const uint16_t pad = 2;
+    my::Style _style = my::Style::Curvy;
+    bool _same_header_footer = false;
+    bool _separate_each = false;
+    size_t _footer_after_lines = 0;
+    const uint16_t _pad = 2;
 };
 
 template <my::iterable T>
