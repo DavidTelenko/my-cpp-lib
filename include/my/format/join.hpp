@@ -2,7 +2,7 @@
 #ifndef MY_JOIN_HPP
 #define MY_JOIN_HPP
 
-#include <my/util/traits.hpp>
+#include <my/format/delimiters.hpp>
 #include <tuple>
 
 namespace my {
@@ -25,39 +25,6 @@ class join_tuple;
 
 template <class P>
 class join_pair;
-
-// delimiter specializations api for custom classes
-template <class T>
-struct delimiters {
-};
-
-template <my::iterable T>
-struct delimiters<T> {
-    inline constexpr static const char* open = "[";
-    inline constexpr static const char* delim = ", ";
-    inline constexpr static const char* close = "]";
-};
-
-template <my::iterator_concept T>
-struct delimiters<T> {
-    inline constexpr static const char* open = "[";
-    inline constexpr static const char* delim = ", ";
-    inline constexpr static const char* close = "]";
-};
-
-template <class... Ts>
-struct delimiters<std::tuple<Ts...>> {
-    inline constexpr static const char* open = "(";
-    inline constexpr static const char* delim = ", ";
-    inline constexpr static const char* close = ")";
-};
-
-template <class... Ts>
-struct delimiters<std::pair<Ts...>> {
-    inline constexpr static const char* open = "(";
-    inline constexpr static const char* delim = ", ";
-    inline constexpr static const char* close = ")";
-};
 
 /**
  * @brief
@@ -153,8 +120,8 @@ class join_range {
     using value_type = It;
 
     inline constexpr explicit join_range(It begin, It end)
-        : b(std::move(begin)),
-          e(std::move(end)) {}
+        : _first(std::move(begin)),
+          _last(std::move(end)) {}
 
     template <class Ch, class Tr>
     friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,
@@ -208,7 +175,7 @@ class join_tuple {
    public:
     using value_type = T;
 
-    inline constexpr explicit join_tuple(const T& rng) : tuple(rng) {}
+    inline constexpr explicit join_tuple(const T& rng) : _tuple(rng) {}
 
     template <class Ch, class Tr>
     friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,
@@ -259,7 +226,7 @@ class join_pair {
    public:
     using value_type = T;
 
-    inline constexpr explicit join_pair(const T& rng) : pair(rng) {}
+    inline constexpr explicit join_pair(const T& rng) : _pair(rng) {}
 
     template <class Ch, class Tr>
     friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,
