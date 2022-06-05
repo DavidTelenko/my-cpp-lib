@@ -18,53 +18,46 @@ template <class StringType,
           class Container = std::vector<StringType>,
           class InserterT = my::inserter_for_t<Container>>
 inline Container split(const StringType &what,
-                       const DelimType &delim = DelimType{},
+                       const DelimType &delim,
                        InserterT insert = InserterT{}) {
     using CharT = typename StringType::value_type;
-
-    Container result;
 
     if constexpr (std::is_same_v<CharT, DelimType>) {
         Container result;
 
         std::basic_stringstream<CharT> ss(what);
         StringType s;
+
         while (std::getline(ss, s, delim)) {
             insert(result, s);
         }
 
+        return result;
+
     } else {
-        if (delim.empty()) {
+        using std::empty;
+        using std::size;
+
+        if (empty(delim)) {
             return my::transform<Container>(
                 what,
                 [](auto el) { return StringType(1, el); },
                 std::move(insert));
         }
 
-        const auto step = delim.size();
-        auto prev = what.find(delim);
+        Container result;
 
-        insert(result, what.substr(0, prev));
+        size_t last = 0;
+        size_t next = 0;
 
-        if (prev == StringType::npos) {
-            return result;
+        while ((next = what.find(delim, last)) != StringType::npos) {
+            insert(result, what.substr(last, next - last));
+            last = next + 1;
         }
+        insert(result, what.substr(last));
 
-        for (;;) {
-            const auto prevStep = prev + step;
-            const auto curr = what.find(delim, prevStep);
-
-            if (curr == StringType::npos) {
-                insert(result, what.substr(prevStep));
-                return result;
-            }
-
-            insert(result, what.substr(prevStep, curr - prev - step));
-            prev = curr;
-        }
+        return result;
     }
-
-    return result;
 }
 
 template <class StringType>
@@ -189,7 +182,7 @@ template <class Ch = char,
 auto toString(T &&obj) {
     static_assert(my::has_print_operator_v<T, std::basic_ostream<Ch, Tr>>);
     std::basic_stringstream<Ch, Tr, Al> ss;
-    ss << std::fixed << std::setprecision(2) << std::forward<T>(obj);
+    ss << std::forward<T>(obj);
     return ss.str();
 }
 
@@ -239,6 +232,58 @@ size_t levDistance(const StringType &lhs, const StringType &rhs) {
     }
 
     return costs[n];
+}
+
+template <typename Ch, typename Tr, typename Al, class Predicate>
+std::basic_istream<Ch, Tr> &
+getline(std::basic_istream<Ch, Tr> &in,
+        std::basic_string<Ch, Tr, Al> &str, Predicate predicate) {
+    using istream_type = std::basic_istream<Ch, Tr>;
+    using string_type = std::basic_string<Ch, Tr, Al>;
+    using ios_base = typename istream_type::ios_base;
+    using int_type = typename istream_type::int_type;
+    using size_type = typename string_type::size_type;
+
+    size_type extracted = 0;
+    const size_type n = str.max_size();
+    typename std::ios_base::iostate err = ios_base::goodbit;
+    typename istream_type::sentry cerb(in, true);
+
+    if (!cerb) {
+        err |= ios_base::failbit;
+        in.setstate(err);
+        return in;
+    }
+
+    try {
+        str.erase();
+        const int_type eof = Tr::eof();
+
+        int_type c = in.rdbuf()->sgetc();
+        while (extracted < n and
+               !Tr::eq_int_type(c, eof) and
+               !std::invoke(predicate, Tr::to_char_type(c))) {
+            str += Tr::to_char_type(c);
+            ++extracted;
+            c = in.rdbuf()->snextc();
+        }
+
+        if (Tr::eq_int_type(c, eof)) {
+            err |= ios_base::eofbit;
+        } else if (std::invoke(predicate, Tr::to_char_type(c))) {
+            ++extracted;
+            in.rdbuf()->sbumpc();
+        } else {
+            err |= ios_base::failbit;
+        }
+    } catch (...) {
+        in._M_setstate(ios_base::badbit);
+    }
+
+    if (!extracted) err |= ios_base::failbit;
+    in.setstate(err);
+
+    return in;
 }
 
 }  // namespace my
