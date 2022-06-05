@@ -4,24 +4,38 @@
 
 #include <my/format/format.hpp>
 //
+#include <cassert>
 #include <chrono>
 
 namespace my {
 
 class Timer {
-    std::ostream& os;
-    std::string_view label;
-    std::string_view format = "[{}] took: {} ns ({} ms)\n";
-    std::chrono::_V2::system_clock::time_point lastTime;
+   public:
+    Timer(std::ostream& os, std::string_view label = "unknown")
+        : _os(os), _label(label) { start(); }
 
-    auto start() {
-        using namespace std::chrono;
-        lastTime = high_resolution_clock::now();
+    Timer(std::string_view label = "unknown")
+        : _os(std::cout), _label(label) { start(); }
+
+    ~Timer() { stop(); }
+
+    auto& setMessageFormat(std::string_view format) {
+        _format = format;
+        return *this;
     }
 
-    auto stop() {
+    void start() {
         using namespace std::chrono;
-        const auto diff = high_resolution_clock::now() - lastTime;
+        _stopped = false;
+        _lastTime = high_resolution_clock::now();
+    }
+
+    void stop() {
+        using namespace std::chrono;
+
+        if(_stopped) return;
+
+        const auto diff = high_resolution_clock::now() - _lastTime;
         const auto milli = duration_cast<milliseconds>(diff).count();
         const auto nano = duration_cast<nanoseconds>(diff).count();
 
@@ -30,16 +44,19 @@ class Timer {
             std::string do_grouping() const { return "\3"; }
         };
 
-        const auto prev = os.imbue(std::locale(os.getloc(), new ThousandsSep));
-        my::printf(os, format.data(), label, nano, milli);
-        os.imbue(prev);
+        const auto prev =
+            _os.imbue(std::locale(_os.getloc(), new ThousandsSep));
+        my::printf(_os, _format.data(), _label, nano, milli);
+        _os.imbue(prev);
+        _stopped = true;
     }
 
-   public:
-    Timer(std::ostream& os, std::string_view label = "unknown") : os(os), label(label) { start(); }
-    Timer(std::string_view label = "unknown") : os(std::cout), label(label) { start(); }
-
-    ~Timer() { stop(); }
+   private:
+    std::ostream& _os;
+    std::string_view _label;
+    std::string_view _format = "[{}] took: {} ns ({} ms)\n";
+    std::chrono::_V2::system_clock::time_point _lastTime;
+    bool _stopped = true;
 };
 
 }  // namespace my
