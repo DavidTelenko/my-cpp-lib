@@ -107,8 +107,8 @@ struct average {
  * @tparam Number
  */
 template <std::integral Number>
-struct is_divisible {
-    inline constexpr explicit is_divisible(Number n)
+struct is_divisible_by {
+    inline constexpr explicit is_divisible_by(Number n)
         : n_(n) {}
 
     inline constexpr bool
