@@ -2,6 +2,7 @@
 #ifndef MY_ALGORITHM_HPP
 #define MY_ALGORITHM_HPP
 
+#include <cassert>
 #include <my/util/functional.hpp>
 #include <my/util/traits.hpp>
 
@@ -61,9 +62,9 @@ constexpr It majority(It first, It last, BiPredicate pred = BiPredicate{}) {
  */
 template <my::iterable Container,
           class BiPredicate = std::equal_to<my::value_t<Container>>>
-inline constexpr auto
+constexpr auto
 majority(const Container &container, BiPredicate pred = BiPredicate{}) {
-    return majority(begin(container), end(container), pred);
+    return my::majority(begin(container), end(container), pred);
 }
 
 namespace detail {
@@ -92,6 +93,8 @@ template <my::iterable Container, std::integral Size, class Generator,
           class Construct = detail::default_generate_construct<Container, Size>>
 Container generate(Generator gen, Size size,
                    Construct construct = Construct{}) {
+    using std::begin;
+    using std::end;
     using value_t = decltype(*begin(std::declval<Container>()));
     static_assert(std::is_convertible_v<decltype(gen()), value_t>);
 
@@ -120,7 +123,7 @@ Container generate(Generator gen, Size size,
  */
 template <class NaryFunction, std::input_iterator InIt,
           std::input_iterator... Iterators>
-inline constexpr NaryFunction
+constexpr NaryFunction
 forEach(InIt first, InIt last, NaryFunction f,
         Iterators... rest) {
     for (; first != last; ++first, (++rest, ...)) {
@@ -142,14 +145,14 @@ forEach(InIt first, InIt last, NaryFunction f,
  */
 template <class NaryFunction, my::iterable Container,
           my::iterable... Containers>
-inline constexpr NaryFunction
+constexpr NaryFunction
 forEach(Container &container, NaryFunction f,
         Containers &...rest) {
     using std::begin;
     using std::end;
-    return forEach(begin(container), end(container),
-                   std::move(f),
-                   begin(rest)...);
+    return my::forEach(begin(container), end(container),
+                       std::move(f),
+                       begin(rest)...);
 }
 
 /**
@@ -165,21 +168,21 @@ forEach(Container &container, NaryFunction f,
  */
 template <class NaryFunction, my::iterable Container,
           my::iterable... Containers>
-inline NaryFunction
+constexpr NaryFunction
 forEach(NaryFunction f, const Container &container,
         const Containers &...rest) {
     using std::begin;
     using std::end;
-    return forEach(cbegin(container), cend(container),
-                   std::move(f),
-                   cbegin(rest)...);
+    return my::forEach(cbegin(container), cend(container),
+                       std::move(f),
+                       cbegin(rest)...);
 }
 
 template <std::input_iterator InIt, std::weakly_incrementable Out,
           class NaryOperator, std::input_iterator... Iterators>
-inline constexpr Out transform(InIt first, InIt last, Out result,
-                               NaryOperator f,
-                               Iterators... rest) {
+constexpr Out transform(InIt first, InIt last, Out result,
+                        NaryOperator f,
+                        Iterators... rest) {
     for (; first != last; ++first, ++result, (++rest, ...)) {
         *result = std::invoke(f, *first, *(rest)...);
     }
@@ -188,11 +191,13 @@ inline constexpr Out transform(InIt first, InIt last, Out result,
 
 template <my::iterable Container, std::weakly_incrementable Out,
           class NaryOperator, my::iterable... Containers>
-inline constexpr Out transform(const Container &container, Out result,
-                               NaryOperator f,
-                               const Containers &...rest) {
-    return transform(begin(container), end(container), std::move(result),
-                     std::move(f), begin(rest)...);
+constexpr Out transform(const Container &container, Out result,
+                        NaryOperator f,
+                        const Containers &...rest) {
+    using std::begin;
+    using std::end;
+    return my::transform(begin(container), end(container), std::move(result),
+                         std::move(f), begin(rest)...);
 }
 
 namespace detail {
@@ -245,7 +250,7 @@ constexpr Result transform(const Container &container, UnaryOperator f,
  */
 template <class Predicate, std::input_iterator InIt,
           std::input_iterator... Iterators>
-inline constexpr bool
+constexpr bool
 any(InIt first, InIt last, Predicate pred,
     Iterators... rest) {
     for (; first != last; ++first, (++rest, ...)) {
@@ -269,7 +274,7 @@ any(InIt first, InIt last, Predicate pred,
  */
 template <class Predicate, my::iterable Container,
           my::iterable... Containers>
-inline constexpr bool
+constexpr bool
 any(Container &&container, Predicate pred,
     Containers &&...rest) {
     using std::cbegin;
@@ -299,7 +304,7 @@ template <class Predicate, std::input_iterator InIt,
 constexpr InIt
 all(InIt first, InIt last, Predicate pred,
     Iterators... rest) {
-    return not any(std::move(first), std::move(last), my::negate(pred),
+    return not my::any(std::move(first), std::move(last), my::negate(pred),
                    std::move(rest)...);
 }
 
@@ -316,7 +321,7 @@ all(InIt first, InIt last, Predicate pred,
  */
 template <class Predicate, my::iterable Container,
           my::iterable... Containers>
-inline constexpr bool
+constexpr bool
 all(Container &&container, Predicate pred,
     Containers &&...rest) {
     using std::cbegin;
@@ -345,7 +350,7 @@ all(Container &&container, Predicate pred,
  */
 template <class NaryFunction, class Accum, std::input_iterator InIt,
           std::input_iterator... Iterators>
-inline constexpr Accum
+constexpr Accum
 reduce(InIt first, InIt last, Accum accum, NaryFunction f,
        Iterators... rest) {
     for (; first != last; ++first, (++rest, ...)) {
@@ -371,7 +376,7 @@ reduce(InIt first, InIt last, Accum accum, NaryFunction f,
  */
 template <class NaryFunction, class Accum, my::iterable Container,
           my::iterable... Containers>
-inline constexpr Accum
+constexpr Accum
 reduce(Container &&container, Accum accum, NaryFunction f,
        Containers &&...rest) {
     using std::cbegin;
