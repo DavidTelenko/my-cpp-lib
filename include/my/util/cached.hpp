@@ -1,6 +1,8 @@
 #pragma once
 
+#include <functional>
 #include <my/util/hashers.hpp>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -64,5 +66,40 @@ class cached<Res(Args...)> {
     std::function<Res(Args...)> _func;
     mutable size_t _limit;
 };
+
+template <class Sig>
+class once;
+
+/**
+ * @brief Calls provided function only once.
+ * Uses std::optional to store the result of the function,
+ * or bool if the function returns void
+ *
+ */
+template <class Res, class... Args>
+class once<Res(Args...)> {
+   public:
+    template <class Function>
+    constexpr explicit once(Function func)
+        : _func(std::move(func)) {
+    }
+
+    Res operator()(Args... args) const {
+        if constexpr (not std::same_as<Res, void>) {
+            static std::optional<Res> value;
+            if (not value) value = _func(args);
+            return value;
+        } else {
+            static bool called = false;
+            if (not called) {
+                _func(args);
+                called = true;
+            }
+        }
+    }
+
+   private:
+    std::function<Res(Args...)> _func;
+}
 
 }  // namespace my
