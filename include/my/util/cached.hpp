@@ -87,12 +87,12 @@ class once<Res(Args...)> {
     Res operator()(Args... args) const {
         if constexpr (not std::same_as<Res, void>) {
             static std::optional<Res> value;
-            if (not value) value = _func(args);
-            return value;
+            if (not value) value = _func(args...);
+            return *value;
         } else {
             static bool called = false;
             if (not called) {
-                _func(args);
+                _func(args...);
                 called = true;
             }
         }
@@ -100,6 +100,6 @@ class once<Res(Args...)> {
 
    private:
     std::function<Res(Args...)> _func;
-}
+};
 
 }  // namespace my
