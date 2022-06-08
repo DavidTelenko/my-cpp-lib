@@ -12,30 +12,30 @@ struct delimiters {
 
 template <my::iterable T>
 struct delimiters<T> {
-    inline constexpr static const char* open = "[";
-    inline constexpr static const char* delim = ", ";
-    inline constexpr static const char* close = "]";
+    constexpr static const char* open = "[";
+    constexpr static const char* delim = ", ";
+    constexpr static const char* close = "]";
 };
 
 template <my::iterator_concept T>
 struct delimiters<T> {
-    inline constexpr static const char* open = "[";
-    inline constexpr static const char* delim = ", ";
-    inline constexpr static const char* close = "]";
+    constexpr static const char* open = "[";
+    constexpr static const char* delim = ", ";
+    constexpr static const char* close = "]";
 };
 
 template <class... Ts>
 struct delimiters<std::tuple<Ts...>> {
-    inline constexpr static const char* open = "(";
-    inline constexpr static const char* delim = ", ";
-    inline constexpr static const char* close = ")";
+    constexpr static const char* open = "(";
+    constexpr static const char* delim = ", ";
+    constexpr static const char* close = ")";
 };
 
 template <class... Ts>
 struct delimiters<std::pair<Ts...>> {
-    inline constexpr static const char* open = "(";
-    inline constexpr static const char* delim = ", ";
-    inline constexpr static const char* close = ")";
+    constexpr static const char* open = "(";
+    constexpr static const char* delim = ", ";
+    constexpr static const char* close = ")";
 };
 
 }  // namespace my

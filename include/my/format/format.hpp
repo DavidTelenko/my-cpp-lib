@@ -54,7 +54,7 @@ printf(std::basic_ostream<Ch, Tr>& os,
  * @param args any types with std::ostream& operator<< implemented
  */
 template <my::joinable<char, std::char_traits<char>>... Args>
-inline constexpr void
+constexpr void
 printf(const char* format, Args&&... args) {
     detail::printf(std::cout, format, std::forward<Args>(args)...);
 }
@@ -68,7 +68,7 @@ printf(const char* format, Args&&... args) {
  * @param args any types with std::wostream& operator<< implemented
  */
 template <my::joinable<wchar_t, std::char_traits<wchar_t>>... Args>
-inline constexpr void
+constexpr void
 wprintf(const wchar_t* format, Args&&... args) {
     detail::printf(std::wcout, format, std::forward<Args>(args)...);
 }
@@ -83,7 +83,7 @@ wprintf(const wchar_t* format, Args&&... args) {
  * @param args any types with std::ostream& operator<< implemented
  */
 template <class Ch, class Tr, my::joinable<Ch, Tr>... Args>
-inline constexpr void
+constexpr void
 printf(std::basic_ostream<Ch, Tr>& os,
        const Ch* format, Args&&... args) {
     detail::printf(os, format, std::forward<Args>(args)...);

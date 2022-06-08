@@ -115,7 +115,7 @@ inline auto& resetcol(std::basic_ostream<C, T>& os) {
  *
  */
 struct setForeground {
-    inline constexpr setForeground(Color foreground) noexcept
+    constexpr setForeground(Color foreground) noexcept
         : fg_(std::move(foreground)) {}
 
     template <class Ch, class Tr>
@@ -133,7 +133,7 @@ struct setForeground {
  *
  */
 struct setBackground {
-    inline constexpr setBackground(Color background) noexcept
+    constexpr setBackground(Color background) noexcept
         : bg_(std::move(background)) {}
 
     template <class Ch, class Tr>
@@ -151,7 +151,7 @@ struct setBackground {
  *
  */
 struct setColor {
-    inline constexpr setColor(Color foreground, Color background) noexcept
+    constexpr setColor(Color foreground, Color background) noexcept
         : fg_(std::move(foreground)), bg_(std::move(background)) {}
 
     template <class Ch, class Tr>
@@ -172,7 +172,7 @@ struct setColor {
  * @param foreground color structure, can be implicitly created from uint32_t
  * @return setForeground manipulator
  */
-[[nodiscard]] inline constexpr auto fg(Color foreground) noexcept {
+[[nodiscard]] constexpr auto fg(Color foreground) noexcept {
     return setForeground(std::move(foreground));
 }
 
@@ -183,7 +183,7 @@ struct setColor {
  * @param background color structure, can be implicitly created from uint32_t
  * @return setBackground manipulator
  */
-[[nodiscard]] inline constexpr auto bg(Color background) noexcept {
+[[nodiscard]] constexpr auto bg(Color background) noexcept {
     return setBackground(std::move(background));
 }
 
@@ -195,8 +195,8 @@ struct setColor {
  * @param background color structure, can be implicitly created from uint32_t
  * @return setColor manipulator
  */
-[[nodiscard]] inline constexpr auto col(Color foreground,
-                                        Color background) noexcept {
+[[nodiscard]] constexpr auto col(Color foreground,
+                                 Color background) noexcept {
     return setColor(std::move(foreground), std::move(background));
 }
 

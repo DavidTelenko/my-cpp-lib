@@ -18,7 +18,7 @@ using owner = T;
 template <my::value F>
 class FinalAction final {
    public:
-    explicit inline constexpr FinalAction(F f) noexcept
+    constexpr explicit FinalAction(F f) noexcept
         : f_(std::move(f)) {
     }
 
@@ -47,25 +47,12 @@ class FinalAction final {
  * @return FinalAction<std::remove_cv_t<std::remove_reference_t<F>>>
  */
 template <class F>
-[[nodiscard]] inline constexpr auto
+[[nodiscard]] constexpr auto
 finally(F &&f) noexcept {
-    using value_f = my::value_from_t<F>;
-    return FinalAction<value_f>(std::forward<F>(f));
+    return FinalAction<my::value_from_t<F>>(std::forward<F>(f));
 }
 
 // various miscellaneous stuff
-
-/**
- * @brief Combines two hashes in a safe way
- *
- * @param lhs hash1
- * @param rhs hash2
- * @return size_t combined hash
- */
-size_t hashCombine(size_t lhs, size_t rhs) {
-    lhs ^= rhs + 0x9e3779b9 + (lhs << 6) + (lhs >> 2);
-    return lhs;
-}
 
 template <class PairT, class WidthT>
 PairT twoDimensionalIndex(size_t index, WidthT width) {
@@ -104,7 +91,7 @@ constexpr bool containsKey(const AssociativeContainer &container, Key &&key) {
 // bit logic + reinterpret
 
 template <my::arithmetic Number>
-inline constexpr bool
+constexpr bool
 isPowerOf2(Number n) {
     if constexpr (std::is_integral_v<Number>) {
         return n > 0 and n & (n - 1) == 0;
@@ -120,16 +107,16 @@ isPowerOf2(Number n) {
  *
  */
 template <std::integral Number>
-constexpr inline void set_bit(Number &number, Number bit) { number |= 1UL << bit; }
+constexpr void set_bit(Number &number, Number bit) { number |= 1UL << bit; }
 
 template <std::integral Number>
-constexpr inline void clear_bit(Number &number, Number bit) { number &= ~(1UL << bit); }
+constexpr void clear_bit(Number &number, Number bit) { number &= ~(1UL << bit); }
 
 template <std::integral Number>
-constexpr inline void toggle_bit(Number &number, Number bit) { number ^= 1UL << bit; }
+constexpr void toggle_bit(Number &number, Number bit) { number ^= 1UL << bit; }
 
 template <std::integral Number>
-constexpr inline bool check_bit(Number number, Number bit) { return (number >> bit) & 1U; }
+constexpr bool check_bit(Number number, Number bit) { return (number >> bit) & 1U; }
 
 }  // namespace my
 

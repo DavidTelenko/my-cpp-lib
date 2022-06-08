@@ -26,7 +26,7 @@ template <template <class...> class Trait, class... Ts>
 using applicable = detail::applicable<Trait, void, Ts...>;
 
 template <template <class...> class Trait, class... Ts>
-inline constexpr bool applicable_v = applicable<Trait, Ts...>::value;
+constexpr bool applicable_v = applicable<Trait, Ts...>::value;
 
 // is iterator
 
@@ -44,7 +44,7 @@ template <class I>
 struct is_iterator<I, std::void_t<typename std::iterator_traits<I>::value_type>>
     : std::true_type {};
 template <typename I>
-inline constexpr bool is_iterator_v = is_iterator<I>::value;
+constexpr bool is_iterator_v = is_iterator<I>::value;
 
 // is tuple
 
@@ -54,7 +54,7 @@ template <typename... T>
 struct is_tuple<std::tuple<T...>> : std::true_type {};
 
 template <typename T>
-inline constexpr bool is_tuple_v = is_tuple<T>::value;
+constexpr bool is_tuple_v = is_tuple<T>::value;
 
 // is pair
 
@@ -64,7 +64,7 @@ template <typename T, typename U>
 struct is_pair<std::pair<T, U>> : std::true_type {};
 
 template <typename T>
-inline constexpr bool is_pair_v = is_pair<T>::value;
+constexpr bool is_pair_v = is_pair<T>::value;
 
 // is associative container
 
@@ -82,7 +82,7 @@ using is_associative_container = std::conjunction<
     applicable<detail::get_mapped_type, T>>;
 
 template <typename T>
-inline constexpr bool is_associative_container_v = is_associative_container<T>::value;
+constexpr bool is_associative_container_v = is_associative_container<T>::value;
 
 template <class T>
 concept associative_container = my::is_associative_container_v<T>;
@@ -91,16 +91,16 @@ concept associative_container = my::is_associative_container_v<T>;
 
 namespace detail {
 
-    template <class T, class Ostream>
-    using call_print_operator = decltype(std::declval<Ostream&>()
-                                         << std::declval<const T&>());
+template <class T, class Ostream>
+using call_print_operator = decltype(std::declval<Ostream&>()
+                                     << std::declval<const T&>());
 }  // namespace detail
 
 template <class T, class Ostream = std::ostream>
 using has_print_operator = applicable<detail::call_print_operator, T, Ostream>;
 
 template <class T, class Ostream = std::ostream>
-inline constexpr bool has_print_operator_v = has_print_operator<T, Ostream>::value;
+constexpr bool has_print_operator_v = has_print_operator<T, Ostream>::value;
 
 // has reserve
 
@@ -115,7 +115,7 @@ template <class T, class SizeT = std::size_t>
 using has_reserve = my::applicable<detail::call_reserve, T, SizeT>;
 
 template <class T, class SizeT>
-inline constexpr bool has_reserve_v = has_reserve<T, SizeT>::value;
+constexpr bool has_reserve_v = has_reserve<T, SizeT>::value;
 
 template <class T, class SizeT = typename T::size_type>
 concept reservable = requires(std::remove_reference_t<T>& obj, SizeT size) {
@@ -126,11 +126,11 @@ concept reservable = requires(std::remove_reference_t<T>& obj, SizeT size) {
 
 namespace detail {
 
-    template <class T, class U>
-    using call_less_than = decltype(std::declval<T>() < std::declval<U>());
+template <class T, class U>
+using call_less_than = decltype(std::declval<T>() < std::declval<U>());
 
-    template <class T, class U>
-    using call_equals = decltype(std::declval<T>() == std::declval<U>());
+template <class T, class U>
+using call_equals = decltype(std::declval<T>() == std::declval<U>());
 
 }  // namespace detail
 
@@ -145,10 +145,10 @@ using is_comparable = std::conjunction<
     applicable<detail::call_less_than, U, T>>;
 
 template <class T, class U>
-inline constexpr bool is_comparable_v = is_comparable<T, U>::value;
+constexpr bool is_comparable_v = is_comparable<T, U>::value;
 
 template <class T, class U>
-inline constexpr bool is_equality_comparable_v = is_equality_comparable<T, U>::value;
+constexpr bool is_equality_comparable_v = is_equality_comparable<T, U>::value;
 
 // is incrementable / decrementable
 
@@ -169,10 +169,10 @@ template <class T>
 using is_decrementable = my::applicable<detail::call_decrement, T>;
 
 template <class T>
-inline constexpr bool is_incrementable_v = is_incrementable<T>::value;
+constexpr bool is_incrementable_v = is_incrementable<T>::value;
 
 template <class T>
-inline constexpr bool is_decrementable_v = is_decrementable<T>::value;
+constexpr bool is_decrementable_v = is_decrementable<T>::value;
 
 // is iterable
 
@@ -194,7 +194,7 @@ using is_iterable = std::conjunction<
     applicable<detail::call_end, T>>;
 
 template <class T>
-inline constexpr bool is_iterable_v = is_iterable<T>::value;
+constexpr bool is_iterable_v = is_iterable<T>::value;
 
 template <class T>
 concept iterable = my::is_iterable_v<T>;
@@ -209,7 +209,7 @@ using is_value =
                                    std::is_const<T>>>;
 
 template <class T>
-inline constexpr bool is_value_v = is_value<T>::value;
+constexpr bool is_value_v = is_value<T>::value;
 
 template <class T>
 concept value = my::is_value_v<T>;

@@ -52,7 +52,7 @@ constexpr decltype(auto) join(T&& val) {
 }
 
 template <class Ch, class T, class R = std::remove_reference_t<T>>
-inline constexpr decltype(auto) join(T&& val) requires(
+constexpr decltype(auto) join(T&& val) requires(
     my::joinable<R, Ch, std::char_traits<Ch>> and
     not std::same_as<Ch, T>) {
     return join<Ch, std::char_traits<Ch>, R>(std::forward<R>(val));
@@ -60,7 +60,7 @@ inline constexpr decltype(auto) join(T&& val) requires(
 
 template <class T, class R = std::remove_reference_t<T>>
 requires my::joinable<R, char, std::char_traits<char>>
-inline constexpr decltype(auto) join(T&& val) {
+constexpr decltype(auto) join(T&& val) {
     return join<char, std::char_traits<char>, R>(std::forward<R>(val));
 }
 
@@ -119,7 +119,7 @@ class join_range {
    public:
     using value_type = It;
 
-    inline constexpr explicit join_range(It begin, It end)
+    constexpr explicit join_range(It begin, It end)
         : _first(std::move(begin)),
           _last(std::move(end)) {}
 
@@ -175,7 +175,7 @@ class join_tuple {
    public:
     using value_type = T;
 
-    inline constexpr explicit join_tuple(const T& rng) : _tuple(rng) {}
+    constexpr explicit join_tuple(const T& rng) : _tuple(rng) {}
 
     template <class Ch, class Tr>
     friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,
@@ -190,7 +190,7 @@ class join_tuple {
     }
 
     template <class Ch = char, class Tr = std::char_traits<Ch>>
-    inline constexpr auto toString() const {
+    constexpr auto toString() const {
         std::basic_ostringstream<Ch, Tr> os;
         return print(os).str();
     }
@@ -202,8 +202,8 @@ class join_tuple {
     auto& print(std::basic_ostream<Ch, Tr>& os) const {
         os << delimiters<T>::open;
         std::apply(
-            _tuple, [&os]<class Arg, class... Args>(Arg && arg,
-                                                    Args && ... args) {
+            _tuple, [&os]<class Arg, class... Args>(Arg&& arg,
+                                                    Args&&... args) {
                 os << join<Ch, Tr>(std::forward<Arg>(arg));
                 ((os << delimiters<T>::delim
                      << join<Ch, Tr>(std::forward<Args>(args))),
@@ -226,7 +226,7 @@ class join_pair {
    public:
     using value_type = T;
 
-    inline constexpr explicit join_pair(const T& rng) : _pair(rng) {}
+    constexpr explicit join_pair(const T& rng) : _pair(rng) {}
 
     template <class Ch, class Tr>
     friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,

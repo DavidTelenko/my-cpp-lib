@@ -15,7 +15,7 @@ template <class T>
 using has_manipulator_tag = my::applicable<detail::get_manipulator_tag, T>;
 
 template <class T>
-inline constexpr bool has_manipulator_tag_v = has_manipulator_tag<T>::value;
+constexpr bool has_manipulator_tag_v = has_manipulator_tag<T>::value;
 
 // /**
 //  * @brief Wrapper for function call directly
@@ -33,7 +33,7 @@ inline constexpr bool has_manipulator_tag_v = has_manipulator_tag<T>::value;
 // struct manip {
 //     using manipulator_tag = ManipulatorTag;
 
-//     inline constexpr manip(Function manipulator) noexcept
+//     constexpr manip(Function manipulator) noexcept
 //         : m_(std::move(manipulator)) {
 //     }
 
