@@ -277,7 +277,7 @@ getline(std::basic_istream<Ch, Tr> &in,
             err |= ios_base::failbit;
         }
     } catch (...) {
-        in._M_setstate(ios_base::badbit);
+        in.setstate(ios_base::badbit);
     }
 
     if (!extracted) err |= ios_base::failbit;

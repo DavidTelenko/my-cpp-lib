@@ -11,10 +11,10 @@ namespace my {
 
 class Timer {
    public:
-    Timer(std::ostream& os, std::string_view label = "unknown")
+    explicit Timer(std::ostream& os, std::string_view label = "unknown")
         : _os(os), _label(label) { start(); }
 
-    Timer(std::string_view label = "unknown")
+    explicit Timer(std::string_view label = "unknown")
         : _os(std::cout), _label(label) { start(); }
 
     ~Timer() { stop(); }
@@ -33,7 +33,7 @@ class Timer {
     void stop() {
         using namespace std::chrono;
 
-        if(_stopped) return;
+        if (_stopped) return;
 
         const auto diff = high_resolution_clock::now() - _lastTime;
         const auto milli = duration_cast<milliseconds>(diff).count();
@@ -55,7 +55,7 @@ class Timer {
     std::ostream& _os;
     std::string_view _label;
     std::string_view _format = "[{}] took: {} ns ({} ms)\n";
-    std::chrono::_V2::system_clock::time_point _lastTime;
+    std::chrono::high_resolution_clock::time_point _lastTime;
     bool _stopped = true;
 };
 
