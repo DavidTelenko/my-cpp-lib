@@ -136,6 +136,7 @@ struct equal_to_value {
         return std::forward<U>(e) == value_;
     }
 
+private:
     T value_;
 };
 
