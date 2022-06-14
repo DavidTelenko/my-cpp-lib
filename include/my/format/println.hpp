@@ -12,7 +12,7 @@ namespace my {
 
 template <class Ch, class Tr = std::char_traits<Ch>>
 struct printer_base {
-    inline constexpr explicit printer_base(std::basic_ostream<Ch, Tr>& os)
+    constexpr explicit printer_base(std::basic_ostream<Ch, Tr>& os)
         : os_(os) {
     }
 
@@ -30,7 +30,7 @@ struct printer_base {
  */
 template <class Ch, class Tr = std::char_traits<Ch>>
 struct newline_printer : public printer_base<Ch, Tr> {
-    inline constexpr explicit newline_printer(std::basic_ostream<Ch, Tr>& os)
+    constexpr explicit newline_printer(std::basic_ostream<Ch, Tr>& os)
         : printer_base<Ch, Tr>(os) {
     }
 
@@ -61,7 +61,7 @@ struct newline_printer : public printer_base<Ch, Tr> {
  */
 template <class Ch, class Tr = std::char_traits<Ch>>
 struct push_printer : public printer_base<Ch, Tr> {
-    inline constexpr explicit push_printer(std::basic_ostream<Ch, Tr>& os)
+    constexpr explicit push_printer(std::basic_ostream<Ch, Tr>& os)
         : printer_base<Ch, Tr>(os) {
     }
 
@@ -85,7 +85,7 @@ struct push_printer : public printer_base<Ch, Tr> {
  */
 template <class Char = char>
 struct setFormat {
-    inline constexpr explicit setFormat(const Char* format)
+    constexpr explicit setFormat(const Char* format)
         : format_(format) {
     }
     const Char* format_;
@@ -98,7 +98,7 @@ struct setFormat {
  * @return constexpr auto
  */
 template <class Ch>
-inline constexpr auto fmt(const Ch* format) noexcept {
+constexpr auto fmt(const Ch* format) noexcept {
     return setFormat(format);
 }
 
@@ -111,12 +111,12 @@ inline constexpr auto fmt(const Ch* format) noexcept {
  */
 template <class Ch, class Tr = std::char_traits<Ch>>
 struct formatted_printer : public printer_base<Ch, Tr> {
-    inline constexpr explicit formatted_printer(std::basic_ostream<Ch, Tr>& os) noexcept
+    constexpr explicit formatted_printer(std::basic_ostream<Ch, Tr>& os) noexcept
         : printer_base<Ch, Tr>(os) {
     }
 
-    inline constexpr explicit formatted_printer(std::basic_ostream<Ch, Tr>& os,
-                                                const Ch* format) noexcept
+    constexpr explicit formatted_printer(std::basic_ostream<Ch, Tr>& os,
+                                         const Ch* format) noexcept
         : printer_base<Ch, Tr>(os), format_(format) {
     }
 
@@ -196,7 +196,7 @@ auto wprintln = newline_printer(std::wcout);
 // alternative printf/println functions
 
 template <class Ch, class Tr>
-inline constexpr auto makePrintln(std::basic_ostream<Ch, Tr>& os) noexcept {
+constexpr auto makePrintln(std::basic_ostream<Ch, Tr>& os) noexcept {
     return newline_printer<Ch, Tr>(os);
 }
 
@@ -225,8 +225,8 @@ auto printf = formatted_printer(std::cout);
 auto wprintf = formatted_printer(std::wcout);
 
 template <class Ch, class Tr>
-inline constexpr auto make_printf(std::basic_ostream<Ch, Tr>& os,
-                                  std::basic_string_view<Ch, Tr> format) noexcept {
+constexpr auto make_printf(std::basic_ostream<Ch, Tr>& os,
+                           std::basic_string_view<Ch, Tr> format) noexcept {
     return formatted_printer<Ch, Tr>(os, format.data());
 }
 

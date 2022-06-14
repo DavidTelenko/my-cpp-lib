@@ -20,13 +20,13 @@ struct lambda_from {
     using Func_ = my::make_member_function_t<Function>;
 
    public:
-    inline constexpr explicit lambda_from(Function function) noexcept
+    constexpr explicit lambda_from(Function function) noexcept
         : f_(std::move(function)) {
     }
 
     template <class... Args>
     requires std::is_invocable_v<Func_, Args...>
-    inline constexpr decltype(auto)
+    constexpr decltype(auto)
     operator()(Args &&...args) noexcept(
         std::is_nothrow_invocable_v<Func_, Args...>) {
         return std::invoke(f_, std::forward<Args>(args)...);
@@ -44,12 +44,12 @@ struct lambda_from {
  */
 template <class Identity, my::value Function>
 struct fold_with {
-    inline constexpr fold_with(Identity identity, Function func)
+    constexpr fold_with(Identity identity, Function func)
         : identity_(std::move(identity)),
           func_(std::move(func)) {}
 
     template <std::common_with<Identity>... Args>
-    inline constexpr auto
+    constexpr auto
     operator()(Args &&...args) const {
         auto accum = identity_;
         return ((accum = std::invoke(func_, std::move(accum),
@@ -73,13 +73,13 @@ struct reducer_from {
     using Func_ = my::make_member_function_t<Function>;
 
    public:
-    inline constexpr explicit reducer_from(Function func)
+    constexpr explicit reducer_from(Function func)
         : func_(std::move(func)) {}
 
     template <class Accum, class... Args>
     requires std::invocable<Func_, std::add_lvalue_reference_t<Accum>,
                             Args...>
-    inline constexpr void
+    constexpr void
     operator()(Accum &accum, Args &&...args) const {
         (std::invoke(func_, accum, std::forward<Args>(args)), ...);
     }
@@ -94,7 +94,7 @@ struct reducer_from {
  */
 template <my::arithmetic Result = double>
 struct average {
-    inline constexpr Result
+    constexpr Result
     operator()(my::arithmetic auto... args) const noexcept {
         return (static_cast<Result>(0.0) + ... + args) /
                static_cast<Result>(sizeof...(args));
@@ -107,11 +107,11 @@ struct average {
  * @tparam Number
  */
 template <std::integral Number>
-struct is_divisible {
-    inline constexpr explicit is_divisible(Number n)
+struct is_divisible_by {
+    constexpr explicit is_divisible_by(Number n)
         : n_(n) {}
 
-    inline constexpr bool
+    constexpr bool
     operator()(std::convertible_to<Number> auto e) const noexcept {
         return e % n_ == 0;
     }
@@ -127,11 +127,11 @@ struct is_divisible {
  */
 template <class T>
 struct equal_to_value {
-    inline constexpr explicit equal_to_value(T value)
+    constexpr explicit equal_to_value(T value)
         : value_(std::move(value)) {}
 
     template <std::equality_comparable_with<T> U>
-    inline constexpr bool
+    constexpr bool
     operator()(U &&e) const noexcept {
         return std::forward<U>(e) == value_;
     }
@@ -147,13 +147,13 @@ private:
  */
 template <my::value Predicate>
 struct negate {
-    inline constexpr explicit negate(Predicate predicate)
+    constexpr explicit negate(Predicate predicate)
         : predicate_(std::move(predicate)) {
     }
 
     template <class... Args>
     requires std::invocable<Predicate, Args...>
-    inline constexpr bool operator()(Args &&...args) const noexcept {
+    constexpr bool operator()(Args &&...args) const noexcept {
         return not std::invoke(predicate_, std::forward<Args>(args)...);
     }
 
@@ -195,13 +195,13 @@ struct project {
     using Proj_ = my::make_member_function_t<Projection>;
 
    public:
-    inline constexpr explicit project(Functor func, Projection proj)
+    constexpr explicit project(Functor func, Projection proj)
         : func_(std::move(func)), proj_(std::move(proj)) {
     }
 
     template <class... Args>
     requires invocable_with_projection<Func_, Proj_, Args...>
-    inline constexpr decltype(auto)
+    constexpr decltype(auto)
     operator()(Args &&...args) const noexcept {
         return std::invoke(func_, std::invoke(proj_,
                                               std::forward<Args>(args))...);
@@ -250,13 +250,13 @@ struct compare {
      * and projection function (std::identity by default)
      *
      */
-    inline constexpr explicit compare(BiPred f = {}, Proj p = {}) noexcept
+    constexpr explicit compare(BiPred f = {}, Proj p = {}) noexcept
         : f_(std::move(f)), p_(std::move(p)) {
     }
 
     template <class T, class U>
     requires my::invocable_with_projection<Pred_, Proj_, T, U>
-    inline constexpr bool
+    constexpr bool
     operator()(const T &a, const U &b) const {
         return std::invoke(f_, std::invoke(p_, a), std::invoke(p_, b));
     }
@@ -272,7 +272,7 @@ struct compare {
      */
     template <my::value BiPred2 = std::less<void>,
               my::value Proj2 = std::identity>
-    inline constexpr auto then(BiPred2 f, Proj2 p = {}) const {
+    constexpr auto then(BiPred2 f, Proj2 p = {}) const {
         // clang-format off
         return my::compare(
             [this, f, p]<class T, class U> 
@@ -297,7 +297,7 @@ struct compare {
      * @return compare structure that wraps lambda call
      */
     template <my::value Proj2>
-    inline constexpr auto thenProject(Proj2 p) const {
+    constexpr auto thenProject(Proj2 p) const {
         return then(std::less{}, std::move(p));
     }
 
@@ -311,7 +311,7 @@ struct compare {
  *
  */
 template <class Projection = std::identity>
-inline constexpr auto compareProject(Projection p = {}) noexcept {
+constexpr auto compareProject(Projection p = {}) noexcept {
     return compare(std::less<void>{}, std::move(p));
 }
 

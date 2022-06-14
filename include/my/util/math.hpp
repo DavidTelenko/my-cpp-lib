@@ -22,67 +22,67 @@ using f128_t = long double;
 inline namespace math_defines {
 
 template <std::floating_point T>
-inline constexpr T E_V = 2.718'281'828'459'045'235'40;
+constexpr T E_V = 2.718'281'828'459'045'235'40;
 template <std::floating_point T>
-inline constexpr T LOG2E_V = 1.442'695'040'888'963'407'40;
+constexpr T LOG2E_V = 1.442'695'040'888'963'407'40;
 template <std::floating_point T>
-inline constexpr T LOG10E_V = 0.434'294'481'903'251'827'65;
+constexpr T LOG10E_V = 0.434'294'481'903'251'827'65;
 template <std::floating_point T>
-inline constexpr T LN2_V = 0.693'147'180'559'945'309'42;
+constexpr T LN2_V = 0.693'147'180'559'945'309'42;
 template <std::floating_point T>
-inline constexpr T LN10_V = 2.302'585'092'994'045'684'02;
+constexpr T LN10_V = 2.302'585'092'994'045'684'02;
 template <std::floating_point T>
-inline constexpr T E_GAMMA_V = 0.577'215'664'901'532'860'60;
+constexpr T E_GAMMA_V = 0.577'215'664'901'532'860'60;
 
 template <std::floating_point T>
-inline constexpr T TAU_V = 6.283'185'307'179'586'231'99;
+constexpr T TAU_V = 6.283'185'307'179'586'231'99;
 template <std::floating_point T>
-inline constexpr T PHI_V = 1.618'033'988'749'894'848'20;
+constexpr T PHI_V = 1.618'033'988'749'894'848'20;
 template <std::floating_point T>
-inline constexpr T QUARTER_PI_V = 0.785'398'163'397'448'309'62;
+constexpr T QUARTER_PI_V = 0.785'398'163'397'448'309'62;
 template <std::floating_point T>
-inline constexpr T HALF_PI_V = 1.570'796'326'794'896'619'23;
+constexpr T HALF_PI_V = 1.570'796'326'794'896'619'23;
 template <std::floating_point T>
-inline constexpr T PI_V = 3.141'592'653'589'793'238'46;
+constexpr T PI_V = 3.141'592'653'589'793'238'46;
 template <std::floating_point T>
-inline constexpr T TWO_PI_V = 6.283'185'307'179'586'231'99;
+constexpr T TWO_PI_V = 6.283'185'307'179'586'231'99;
 template <std::floating_point T>
-inline constexpr T INV_PI_V = 0.318'309'886'183'790'671'54;
+constexpr T INV_PI_V = 0.318'309'886'183'790'671'54;
 template <std::floating_point T>
-inline constexpr T INV_SQRT_PI_V = 1.128'379'167'095'512'573'90;
+constexpr T INV_SQRT_PI_V = 1.128'379'167'095'512'573'90;
 template <std::floating_point T>
-inline constexpr T INV_TWO_PI_V = 0.636'619'772'367'581'343'08;
+constexpr T INV_TWO_PI_V = 0.636'619'772'367'581'343'08;
 
 template <std::floating_point T>
-inline constexpr T SQRT2_V = 1.414'213'562'373'095'048'80;
+constexpr T SQRT2_V = 1.414'213'562'373'095'048'80;
 template <std::floating_point T>
-inline constexpr T SQRT3_V = 1.732'050'807'568'877'193'17;
+constexpr T SQRT3_V = 1.732'050'807'568'877'193'17;
 template <std::floating_point T>
-inline constexpr T INV_SQRT2_V = 0.707'106'781'186'547'524'40;
+constexpr T INV_SQRT2_V = 0.707'106'781'186'547'524'40;
 template <std::floating_point T>
-inline constexpr T INV_SQRT3_V = 0.577'350'269'189'625'842'08;
+constexpr T INV_SQRT3_V = 0.577'350'269'189'625'842'08;
 
-inline constexpr double E = 2.718'281'828'459'045'235'40;
-inline constexpr double LOG2E = 1.442'695'040'888'963'407'40;
-inline constexpr double LOG10E = 0.434'294'481'903'251'827'65;
-inline constexpr double LN2 = 0.693'147'180'559'945'309'42;
-inline constexpr double LN10 = 2.302'585'092'994'045'684'02;
-inline constexpr double E_GAMMA = 0.577'215'664'901'532'860'60;
+constexpr double E = 2.718'281'828'459'045'235'40;
+constexpr double LOG2E = 1.442'695'040'888'963'407'40;
+constexpr double LOG10E = 0.434'294'481'903'251'827'65;
+constexpr double LN2 = 0.693'147'180'559'945'309'42;
+constexpr double LN10 = 2.302'585'092'994'045'684'02;
+constexpr double E_GAMMA = 0.577'215'664'901'532'860'60;
 
-inline constexpr double TAU = 6.283'185'307'179'586'231'99;
-inline constexpr double PHI = 1.618'033'988'749'894'848'20;
-inline constexpr double QUARTER_PI = 0.785'398'163'397'448'309'62;
-inline constexpr double HALF_PI = 1.570'796'326'794'896'619'23;
-inline constexpr double PI = 3.141'592'653'589'793'238'46;
-inline constexpr double TWO_PI = 6.283'185'307'179'586'231'99;
-inline constexpr double INV_PI = 0.318'309'886'183'790'671'54;
-inline constexpr double INV_SQRT_PI = 1.128'379'167'095'512'573'90;
-inline constexpr double INV_TWO_PI = 0.636'619'772'367'581'343'08;
+constexpr double TAU = 6.283'185'307'179'586'231'99;
+constexpr double PHI = 1.618'033'988'749'894'848'20;
+constexpr double QUARTER_PI = 0.785'398'163'397'448'309'62;
+constexpr double HALF_PI = 1.570'796'326'794'896'619'23;
+constexpr double PI = 3.141'592'653'589'793'238'46;
+constexpr double TWO_PI = 6.283'185'307'179'586'231'99;
+constexpr double INV_PI = 0.318'309'886'183'790'671'54;
+constexpr double INV_SQRT_PI = 1.128'379'167'095'512'573'90;
+constexpr double INV_TWO_PI = 0.636'619'772'367'581'343'08;
 
-inline constexpr double SQRT2 = 1.414'213'562'373'095'048'80;
-inline constexpr double SQRT3 = 1.732'050'807'568'877'193'17;
-inline constexpr double INV_SQRT2 = 0.707'106'781'186'547'524'40;
-inline constexpr double INV_SQRT3 = 0.577'350'269'189'625'842'08;
+constexpr double SQRT2 = 1.414'213'562'373'095'048'80;
+constexpr double SQRT3 = 1.732'050'807'568'877'193'17;
+constexpr double INV_SQRT2 = 0.707'106'781'186'547'524'40;
+constexpr double INV_SQRT3 = 0.577'350'269'189'625'842'08;
 
 }  // namespace math_defines
 
@@ -148,7 +148,7 @@ struct CartesianToPolarResult {
  * @return PolarToCartesianResult<Number> structure with .x and .y
  */
 template <std::floating_point Number>
-inline constexpr detail::PolarToCartesianResult<Number>
+constexpr detail::PolarToCartesianResult<Number>
 polarToCartesian(Number radius, Number angle) {
     return {.x = radius * std::cos(angle), .y = radius * std::sin(angle)};
 }
@@ -164,7 +164,7 @@ polarToCartesian(Number radius, Number angle) {
  * .radius and .angle members
  */
 template <std::floating_point Number>
-inline constexpr detail::CartesianToPolarResult<Number>
+constexpr detail::CartesianToPolarResult<Number>
 cartesianToPolar(Number x, Number y) {
     return {.radius = std::hypot(x, y), .angle = std::atan(x / y)};
 }
@@ -327,7 +327,7 @@ constexpr Number rsqrt(Number x) { return 1.0 / std::sqrt(x); }
  *
  * @return Pseudorandom number on closed range [low, high].
  */
-template <std::floating_point Number = float>
+template <my::arithmetic Number = float>
 Number random(Number low = 0, Number high = 1) {
     // avoiding boilerplate)
     using clock = std::chrono::high_resolution_clock;
@@ -566,7 +566,7 @@ constexpr Number rect(Number x) {
  * @return positive absolute difference of two numbers
  */
 template <my::arithmetic Number = float>
-inline constexpr Number diff(Number lhs, Number rhs) {
+constexpr Number diff(Number lhs, Number rhs) {
     return lhs < rhs ? rhs - lhs : lhs - rhs;
 }
 

@@ -18,7 +18,7 @@ struct Table {
     using ostream_t = std::basic_ostream<Ch, Tr>;
 
    public:
-    inline constexpr Table() = default;
+    constexpr Table() = default;
     /**
      * @brief Adds row elements to table. If there is only
      * one parameter and it is iterable
@@ -415,7 +415,7 @@ struct Table {
     }
 
     template <class T>
-    inline constexpr static void
+    constexpr static void
     print_n(ostream_t& os, size_t n, T&& val) {
         std::ranges::fill_n(std::ostream_iterator<T, Ch, Tr>(os),
                             n, std::forward<T>(val));
@@ -473,7 +473,7 @@ auto tableObjects(const T& objects, Projections... proj) {
 }
 
 template <my::iterable T>
-inline constexpr auto table(const T& val) {
+constexpr auto table(const T& val) {
     if constexpr (not my::is_associative_container_v<T>) {
         return tableIterable(val);
     } else {
@@ -482,7 +482,7 @@ inline constexpr auto table(const T& val) {
 }
 
 template <my::iterable T, class... Projections>
-inline constexpr auto table(const T& val, Projections... proj) {
+constexpr auto table(const T& val, Projections... proj) {
     return tableObjects(val, std::move(proj)...);
 }
 

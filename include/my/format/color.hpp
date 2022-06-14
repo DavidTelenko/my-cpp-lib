@@ -17,27 +17,28 @@ namespace my {
 struct Color {
     using enum color;
 
-    constexpr Color()
-        : r(0), g(0), b(0) {}
+    constexpr Color(uint8_t rgb = 0)
+        : r(rgb), g(rgb), b(rgb) {}
 
     constexpr Color(uint8_t r, uint8_t g, uint8_t b)
         : r(r), g(g), b(b) {}
 
-    constexpr Color(uint32_t hex)
-        : Color(((hex >> 16) & 0xFF),
-                ((hex >> 8) & 0xFF),
-                (hex & 0xFF)) {}
-
     constexpr Color(my::color c)
-        : Color(static_cast<uint32_t>(c)) {}
+        : Color(fromHex(static_cast<uint32_t>(c))) {}
 
-    constexpr uint32_t toHex() {
-        return (static_cast<uint32_t>(r) << 16) |
-               (static_cast<uint32_t>(g) << 8) | b;
+    static constexpr uint32_t toHex(Color c) {
+        return (static_cast<uint32_t>(c.r) << 16) |
+               (static_cast<uint32_t>(c.g) << 8) | c.b;
     }
 
-    constexpr bool operator==(uint32_t hex) { return toHex() == hex; }
-    constexpr bool operator!=(uint32_t hex) { return toHex() != hex; }
+    static constexpr Color fromHex(uint32_t hex) {
+        return Color(((hex >> 16) & 0xFF),
+                     ((hex >> 8) & 0xFF),
+                     (hex & 0xFF));
+    }
+
+    constexpr bool operator==(uint32_t hex) { return toHex(*this) == hex; }
+    constexpr bool operator!=(uint32_t hex) { return !(*this == hex); }
 
     uint8_t r, g, b;
 };
@@ -114,7 +115,7 @@ inline auto& resetcol(std::basic_ostream<C, T>& os) {
  *
  */
 struct setForeground {
-    inline constexpr setForeground(Color foreground) noexcept
+    constexpr setForeground(Color foreground) noexcept
         : fg_(std::move(foreground)) {}
 
     template <class Ch, class Tr>
@@ -132,7 +133,7 @@ struct setForeground {
  *
  */
 struct setBackground {
-    inline constexpr setBackground(Color background) noexcept
+    constexpr setBackground(Color background) noexcept
         : bg_(std::move(background)) {}
 
     template <class Ch, class Tr>
@@ -150,7 +151,7 @@ struct setBackground {
  *
  */
 struct setColor {
-    inline constexpr setColor(Color foreground, Color background) noexcept
+    constexpr setColor(Color foreground, Color background) noexcept
         : fg_(std::move(foreground)), bg_(std::move(background)) {}
 
     template <class Ch, class Tr>
@@ -165,25 +166,13 @@ struct setColor {
 };
 
 /**
- * @brief Reset color manipulator proxy
- *
- */
-struct resetcol_t {
-    template <class Ch, class Tr>
-    friend inline auto& operator<<(std::basic_ostream<Ch, Tr>& os,
-                                   const resetcol_t& bg) {
-        return resetcol(os);
-    }
-};
-
-/**
  * @brief Convenience function to create setForeground manipulator,
  * @note can be called "make_set_foreground"
  *
  * @param foreground color structure, can be implicitly created from uint32_t
  * @return setForeground manipulator
  */
-[[nodiscard]] inline constexpr auto fg(Color foreground) noexcept {
+[[nodiscard]] constexpr auto fg(Color foreground) noexcept {
     return setForeground(std::move(foreground));
 }
 
@@ -194,7 +183,7 @@ struct resetcol_t {
  * @param background color structure, can be implicitly created from uint32_t
  * @return setBackground manipulator
  */
-[[nodiscard]] inline constexpr auto bg(Color background) noexcept {
+[[nodiscard]] constexpr auto bg(Color background) noexcept {
     return setBackground(std::move(background));
 }
 
@@ -206,18 +195,10 @@ struct resetcol_t {
  * @param background color structure, can be implicitly created from uint32_t
  * @return setColor manipulator
  */
-[[nodiscard]] inline constexpr auto col(Color foreground,
-                                        Color background) noexcept {
+[[nodiscard]] constexpr auto col(Color foreground,
+                                 Color background) noexcept {
     return setColor(std::move(foreground), std::move(background));
 }
-
-/**
- * @brief Manipulator to reset color of stream
- *
- * @param os output stream reference
- * @return reference to os
- */
-inline constexpr resetcol_t resetcol() noexcept { return resetcol_t{}; }
 
 /**
  * @brief Prints colored formatted output
@@ -234,7 +215,7 @@ inline void printf(std::basic_ostream<Ch, Tr>& os,
                    const Ch* format, Args&&... args) {
     setcol(os, foreground, background);
     printf(os, format, args...);
-    os << resetcol;
+    resetcol(os);
 }
 
 /**
@@ -250,7 +231,7 @@ inline void printf(std::ostream& os, Color foreground,
                    const char* format, Args&&... args) {
     setfg(os, foreground);
     printf(os, format, args...);
-    os << resetcol;
+    resetcol(os);
 }
 
 /**
