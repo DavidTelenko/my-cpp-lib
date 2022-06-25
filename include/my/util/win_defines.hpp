@@ -1,6 +1,9 @@
 #pragma once
 #ifndef MY_WIN_DEFINES_HPP
 #define MY_WIN_DEFINES_HPP
+#ifndef NOMINMAX
+#define NOMINMAX 1
+#endif
 
 #include <windows.h>
 
