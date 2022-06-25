@@ -31,7 +31,7 @@
 *.out
 *.app
 
-/test
 /.vscode
-/src
 /debug
+/test
+/src
