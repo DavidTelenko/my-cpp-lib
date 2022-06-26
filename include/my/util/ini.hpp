@@ -1,5 +1,6 @@
 #include <bitset>
 #include <cassert>
+#include <limits>
 #include <map>
 #include <ranges>
 #include <sstream>
@@ -20,6 +21,39 @@ template <class... Ts>
 struct overload : Ts... { using Ts::operator()...; };
 template <class... Ts>
 overload(Ts...) -> overload<Ts...>;
+
+/**
+ * @brief Manipulator to print floats without zeroes at the end
+ *
+ * @tparam T
+ */
+template <std::floating_point T>
+struct stripZeroes {
+    constexpr explicit stripZeroes(T value)
+        : _value(value) {
+    }
+
+    template <class Ch, class Tr>
+    friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,
+                            const stripZeroes& obj) {
+        std::basic_stringstream<Ch, Tr> ss;
+
+        ss << std::boolalpha
+           << std::showpoint
+           << std::setprecision(std::numeric_limits<T>::max_digits10)
+           << obj._value;
+
+        auto num = ss.str();
+        num = num.substr(0, num.find_last_not_of('0') + 1);
+        if (num.back() == '.') num.push_back('0');
+        os << num;
+
+        return os;
+    }
+
+   private:
+    T _value;
+};
 
 }  // namespace
 
@@ -339,10 +373,10 @@ class ini {
      */
     void write(std::ostream& os) const {
         auto value_visitor = overload(
-            [&os](bool_t val) { os << (val ? "true" : "false"); },
-            [&os](null_t val) { os << "null"; },
+            [&os](bool_t val) { os << val; },
+            [&os](null_t val) { os << val; },
             [&os](int_t val) { os << val; },
-            [&os](float_t val) { os << val; },
+            [&os](float_t val) { os << stripZeroes(val); },
             [&os](const string_t& val) { os << std::quoted(val); });
 
         for (auto&& section : _sections) {
@@ -369,7 +403,7 @@ class ini {
         return ss.str();
     }
 
-    // TODO test the shit of me
+    // TODO test me
 
     /**
      * @brief Explicit call to parsing function
@@ -377,9 +411,15 @@ class ini {
      * @param is reference to stream from which to parse data
      */
     void read(std::istream& is) {
-        static auto isSectionOpen = [](char_t ch) -> bool { return ch == '['; };
-        static auto isSectionClose = [](char_t ch) -> bool { return ch == ']'; };
-        static auto isQuote = [](char_t ch) -> bool { return ch == '"'; };
+        static auto isLower = [](char_t ch) -> bool {
+            return ch >= 'a' and ch <= 'z';
+        };
+        static auto isUpper = [](char_t ch) -> bool {
+            return ch >= 'A' and ch <= 'Z';
+        };
+        static auto isAlpha = [](char_t ch) -> bool {
+            return isLower(ch) or isUpper(ch);
+        };
         static auto isBinDigit = [](char_t ch) -> bool {
             return ch == '1' or ch == '0';
         };
@@ -394,27 +434,29 @@ class ini {
                    (ch >= 'A' and ch <= 'F') or
                    (ch >= 'a' and ch <= 'f');
         };
-        static auto isExponent = [](char_t ch) -> bool {
-            return ch == 'E' or ch == 'e';
-        };
-        static auto isDot = [](char_t ch) -> bool { return ch == '.'; };
-        static auto isMinus = [](char_t ch) -> bool { return ch == '-'; };
-        static auto isPlus = [](char_t ch) -> bool { return ch == '+'; };
-        static auto isUnderscore = [](char_t ch) -> bool { return ch == '_'; };
-        static auto isAlpha = [](char_t ch) -> bool {
-            return (ch >= 'a' and ch <= 'z') or  // lower
-                   (ch >= 'A' and ch <= 'Z');    // upper
-        };
-        static auto isEndline = [](char_t ch) -> bool { return ch == '\n'; };
-        static auto isBackslash = [](char_t ch) -> bool { return ch == '\\'; };
         static auto isComment = [](char_t ch) -> bool { return ch == ';' or
                                                                ch == '#'; };
         static auto isSpace = [](char_t ch) -> bool { return ch == ' ' or
                                                              ch == '\t'; };
+        static auto isExponent = [](char_t ch) -> bool {
+            return ch == 'E' or ch == 'e';
+        };
+
+        static auto isSectionOpen = [](char_t ch) -> bool { return ch == '['; };
+        static auto isSectionClose = [](char_t ch) -> bool { return ch == ']'; };
+        static auto isQuote = [](char_t ch) -> bool { return ch == '"'; };
+        static auto isDot = [](char_t ch) -> bool { return ch == '.'; };
+        static auto isMinus = [](char_t ch) -> bool { return ch == '-'; };
+        static auto isPlus = [](char_t ch) -> bool { return ch == '+'; };
+        static auto isUnderscore = [](char_t ch) -> bool { return ch == '_'; };
+        static auto isEndline = [](char_t ch) -> bool { return ch == '\n'; };
+        static auto isBackslash = [](char_t ch) -> bool { return ch == '\\'; };
         static auto isEquals = [](char_t ch) -> bool { return ch == '='; };
+
         static auto isTrueStart = [](char_t ch) -> bool { return ch == 't'; };
         static auto isFalseStart = [](char_t ch) -> bool { return ch == 'f'; };
         static auto isNullStart = [](char_t ch) -> bool { return ch == 'n'; };
+
         static auto isHexStart = [](char_t ch, char_t next) -> bool {
             return ch == '0' and next == 'x';
         };
@@ -423,9 +465,6 @@ class ini {
         };
         static auto isOctStart = [](char_t ch, char_t next) -> bool {
             return ch == '0' and next == 'o';
-        };
-        static auto isNull = [](const auto& value) -> bool {
-            return value == "null";
         };
 
         enum State {
@@ -469,8 +508,7 @@ class ini {
 
         } current;
 
-        static auto regularTokenEndHandle = [](char_t ch,
-                                               auto& current,
+        static auto regularTokenEndHandle = [](char_t ch, auto& current,
                                                auto finalize) -> bool {
             if (isSpace(ch)) {
                 finalize(current);
@@ -543,7 +581,8 @@ class ini {
 
                     if (not(isAlpha(ch) or isDigit(ch))) {
                         throw std::runtime_error(my::format(
-                            "Section name must contain only alpha numeric chars:{}:{}",
+                            "Section name must contain only "
+                            "alpha numeric chars:{}:{}",
                             current.line, current.pos));
                     }
 
@@ -578,14 +617,16 @@ class ini {
                         break;
                     }
                     throw std::runtime_error(
-                        my::format("Only trailing spaces, comment or newline is required after value:{}:{}",
+                        my::format("Only trailing spaces, comment or "
+                                   "newline is required after value:{}:{}",
                                    current.line, current.pos));
                 }
 
                 case key: {
                     if (isComment(ch)) {
                         throw std::runtime_error(
-                            my::format("Comments is prohibited inside of key declaration:{}:{}",
+                            my::format("Comments is prohibited inside "
+                                       "of key declaration:{}:{}",
                                        current.line, current.pos));
                     }
 
@@ -611,7 +652,8 @@ class ini {
 
                     if (not(isAlpha(ch) or isDigit(ch) or isUnderscore(ch))) {
                         throw std::runtime_error(
-                            my::format("Key must contain only alpha numeric chars:{}:{}",
+                            my::format("Key must contain only alpha "
+                                       "numeric chars:{}:{}",
                                        current.line, current.pos));
                     }
 
@@ -687,7 +729,8 @@ class ini {
                     }
 
                     throw std::runtime_error(my::format(
-                        "Value must be either quoted string, number, boolean, or null (empty line):{}:{}",
+                        "Value must be either quoted string, number, "
+                        "boolean, or null (empty line):{}:{}",
                         current.line, current.pos));
                 }
 
@@ -722,7 +765,8 @@ class ini {
                             ss >> result;
                             if (not ss) {
                                 throw std::runtime_error(my::format(
-                                    "Value \"{}\" is invalid floating point value:{}:{}",
+                                    "Value \"{}\" is invalid floating "
+                                    "point value:{}:{}",
                                     curr.value, curr.line, curr.pos));
                             }
                             _sections[curr.section][curr.key] = result;
@@ -731,7 +775,8 @@ class ini {
                     if (not(isDigit(ch) or isExponent(ch) or
                             isPlus(ch) or isMinus(ch))) {
                         throw std::runtime_error(my::format(
-                            "Invalid symbol \"{}\" in floating point number:{}:{}",
+                            "Invalid symbol \"{}\" in floating point "
+                            "number:{}:{}",
                             ch, current.line, current.pos));
                     }
 
@@ -746,7 +791,8 @@ class ini {
                             ss >> result;
                             if (not ss) {
                                 throw std::runtime_error(my::format(
-                                    "Value \"{}\" is invalid integral value:{}:{}",
+                                    "Value \"{}\" is invalid integral "
+                                    "value:{}:{}",
                                     curr.value, curr.line, curr.pos));
                             }
                             _sections[curr.section][curr.key] = result;
@@ -760,7 +806,8 @@ class ini {
 
                     if (not isDigit(ch)) {
                         throw std::runtime_error(my::format(
-                            "Integer must only contain digits in range [0 - 9]:{}:{}",
+                            "Integer must only contain digits "
+                            "in range [0 - 9]:{}:{}",
                             current.line, current.pos));
                     }
 
@@ -776,7 +823,8 @@ class ini {
 
                     if (not isBinDigit(ch)) {
                         throw std::runtime_error(my::format(
-                            "Binary integer must only contain 0 and 1 digits:{}:{}",
+                            "Binary integer must only contain "
+                            "0 and 1 digits:{}:{}",
                             current.line, current.pos));
                     }
 
@@ -799,7 +847,8 @@ class ini {
 
                     if (not isOctDigit(ch)) {
                         throw std::runtime_error(my::format(
-                            "Octal integer must only contain digits in range [0 - 7]:{}:{}",
+                            "Octal integer must only contain "
+                            "digits in range [0 - 7]:{}:{}",
                             current.line, current.pos));
                     }
 
@@ -822,7 +871,8 @@ class ini {
 
                     if (not isHexDigit(ch)) {
                         throw std::runtime_error(my::format(
-                            "Hexadecimal integer must only contain digits in range [0 - 9] and chars in range [A - F]:{}:{}",
+                            "Hexadecimal integer must only contain digits "
+                            "in range [0 - 9] and chars in range [A - F]:{}:{}",
                             current.line, current.pos));
                     }
 
@@ -849,7 +899,7 @@ class ini {
 
                 case null_value: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
-                            if (not isNull(curr.value)) {
+                            if (curr.value != "null") {
                                 throw std::runtime_error(
                                     my::format(
                                         "Value \"{}\" is invalid null value:{}:{}",
