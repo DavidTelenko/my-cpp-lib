@@ -221,6 +221,7 @@ struct stripZeroes {
  *      value1 = null
  *
  */
+template <template <class, class> class Map = std::map>
 class ini {
    public:
     using bool_t = bool;
@@ -229,9 +230,7 @@ class ini {
     using string_t = std::string;
 
     struct null_t {
-        template <class Ch, class Tr>
-        friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,
-                                const null_t& obj) {
+        friend auto& operator<<(std::ostream& os, const null_t& obj) {
             os << "null";
             return os;
         }
@@ -239,7 +238,7 @@ class ini {
 
     using key_t = string_t;
     using value_t = std::variant<null_t, bool_t, float_t, int_t, string_t>;
-    using container_t = std::map<key_t, value_t>;
+    using container_t = Map<key_t, value_t>;
 
     using char_t = string_t::value_type;
 
@@ -927,15 +926,15 @@ class ini {
     }
 
    private:
-    std::map<key_t, container_t> _sections;
+    Map<key_t, container_t> _sections;
 };
 
 inline namespace literals {
 
 inline namespace ini_literals {
 
-ini operator"" _ini(const char* data, size_t) {
-    ini result(data);
+auto operator"" _ini(const char* data, size_t) {
+    ini<std::map> result(data);
     return result;
 }
 
