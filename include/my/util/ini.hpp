@@ -1,6 +1,8 @@
+#include <bitset>
 #include <cassert>
 #include <map>
 #include <my/format/format.hpp>
+#include <my/format/println.hpp>
 #include <my/util/functional.hpp>
 #include <my/util/num_parser.hpp>
 #include <ranges>
@@ -214,35 +216,40 @@ class ini {
             string,
             floating,
             integer,
+            bin_integer,
+            oct_integer,
+            hex_integer,
             boolean,
             null_value,
         } state = begin;
 
-        enum keyword {
-            true_,
-            false_,
-            null,
-            //
-            amount
-        };
-
-        static constexpr size_t keywordsAmount =
-            static_cast<size_t>(keyword::amount);
-
-        static const std::array<std::string, keywordsAmount> keywords = {
-            "true",
-            "false",
-            "null",
-        };
-
         static auto isSectionOpen = [](char_t ch) -> bool { return ch == '['; };
         static auto isSectionClose = [](char_t ch) -> bool { return ch == ']'; };
         static auto isQuote = [](char_t ch) -> bool { return ch == '"'; };
-        static auto isDigit = [](char_t ch) -> bool { return (ch - '0') <= 9; };
+        static auto isBinDigit = [](char_t ch) -> bool {
+            return ch == '1' or ch == '0';
+        };
+        static auto isOctDigit = [](char_t ch) -> bool {
+            return ch >= '0' and ch <= '7';
+        };
+        static auto isDigit = [](char_t ch) -> bool {
+            return ch >= '0' and ch <= '9';
+        };
+        static auto isHexDigit = [](char_t ch) -> bool {
+            return isDigit(ch) or
+                   (ch >= 'A' and ch <= 'F') or
+                   (ch >= 'a' and ch <= 'f');
+        };
+        static auto isExponent = [](char_t ch) -> bool {
+            return ch == 'E' or ch == 'e';
+        };
         static auto isDot = [](char_t ch) -> bool { return ch == '.'; };
+        static auto isMinus = [](char_t ch) -> bool { return ch == '-'; };
+        static auto isPlus = [](char_t ch) -> bool { return ch == '+'; };
+        static auto isUnderscore = [](char_t ch) -> bool { return ch == '_'; };
         static auto isAlpha = [](char_t ch) -> bool {
-            return (ch >= 97 and ch <= 122) or  // lower
-                   (ch >= 65 and ch <= 90);     // upper
+            return (ch >= 'a' and ch <= 'z') or  // lower
+                   (ch >= 'A' and ch <= 'Z');    // upper
         };
         static auto isEndline = [](char_t ch) -> bool { return ch == '\n'; };
         static auto isBackslash = [](char_t ch) -> bool { return ch == '\\'; };
@@ -255,15 +262,17 @@ class ini {
         static auto isTrueStart = [](char_t ch) -> bool { return ch == 't'; };
         static auto isFalseStart = [](char_t ch) -> bool { return ch == 'f'; };
         static auto isNullStart = [](char_t ch) -> bool { return ch == 'n'; };
-
-        static auto isTrue = [](const auto& value) -> bool {
-            return value == keywords[keyword::true_];
+        static auto isHexStart = [](char_t ch, char_t next) -> bool {
+            return ch == '0' and next == 'x';
         };
-        static auto isFalse = [](const auto& value) -> bool {
-            return value == keywords[keyword::false_];
+        static auto isBinStart = [](char_t ch, char_t next) -> bool {
+            return ch == '0' and next == 'b';
+        };
+        static auto isOctStart = [](char_t ch, char_t next) -> bool {
+            return ch == '0' and next == 'o';
         };
         static auto isNull = [](const auto& value) -> bool {
-            return value == keywords[keyword::null];
+            return value == "null";
         };
 
         struct {
@@ -404,6 +413,7 @@ class ini {
                             my::format("Comments is prohibited inside of key declaration:{}:{}",
                                        current.line, current.pos));
                     }
+
                     if (isSpace(ch)) {
                         if (current.key.empty()) {
                             throw std::runtime_error(
@@ -413,6 +423,7 @@ class ini {
                         state = key_value_delim;
                         break;
                     }
+
                     if (isEquals(ch)) {
                         if (current.key.empty()) {
                             throw std::runtime_error(
@@ -422,21 +433,25 @@ class ini {
                         state = value_begin;
                         break;
                     }
-                    if (not(isAlpha(ch) or isDigit(ch))) {
+
+                    if (not(isAlpha(ch) or isDigit(ch) or isUnderscore(ch))) {
                         throw std::runtime_error(
                             my::format("Key must contain only alpha numeric chars:{}:{}",
                                        current.line, current.pos));
                     }
+
                     current.key.push_back(ch);
                     break;
                 }
 
                 case key_value_delim: {
                     if (isSpace(ch)) break;
+
                     if (isEquals(ch)) {
                         state = value_begin;
                         break;
                     }
+
                     throw std::runtime_error(
                         my::format("Key must not contain spaces:{}:{}",
                                    current.line, current.pos));
@@ -454,7 +469,25 @@ class ini {
                         break;
                     }
 
-                    if (isDigit(ch)) {
+                    if (isHexStart(ch, is.peek())) {
+                        is.get();
+                        state = hex_integer;
+                        break;
+                    }
+
+                    if (isBinStart(ch, is.peek())) {
+                        is.get();
+                        state = bin_integer;
+                        break;
+                    }
+
+                    if (isOctStart(ch, is.peek())) {
+                        is.get();
+                        state = oct_integer;
+                        break;
+                    }
+
+                    if (isDigit(ch) or isMinus(ch) or isPlus(ch)) {
                         current.value.push_back(ch);
                         state = integer;
                         break;
@@ -509,18 +542,20 @@ class ini {
 
                 case floating: {
                     if (regularTokenEndHandle(ch, [&current, this]() {
-                            const auto optval = my::parse<float_t>(current.value);
-                            if (not optval) {
+                            std::istringstream ss(current.value);
+                            float_t result;
+                            ss >> result;
+                            if (not ss) {
                                 throw std::runtime_error(my::format(
-                                    "Error while parsing floating point number \"{}\":{}:{}",
+                                    "Value \"{}\" is invalid floating point value:{}:{}",
                                     current.value, current.line, current.pos));
                             }
-                            _sections[current.section][current.key] = *optval;
+                            _sections[current.section][current.key] = result;
                         })) break;
 
-                    if (not isDigit(ch)) {
+                    if (not(isDigit(ch) or isExponent(ch))) {
                         throw std::runtime_error(my::format(
-                            "Number must only contain digits:{}:{}",
+                            "Floating point number must only contain digits [0 - 9] or dot '.':{}:{}",
                             current.line, current.pos));
                     }
 
@@ -530,13 +565,15 @@ class ini {
 
                 case integer: {
                     if (regularTokenEndHandle(ch, [&current, this]() {
-                            const auto optval = my::parse<int_t>(current.value);
-                            if (not optval) {
+                            std::istringstream ss(current.value);
+                            int_t result;
+                            ss >> result;
+                            if (not ss) {
                                 throw std::runtime_error(my::format(
-                                    "Error while parsing integral number \"{}\":{}:{}",
+                                    "Value \"{}\" is invalid integral value:{}:{}",
                                     current.value, current.line, current.pos));
                             }
-                            _sections[current.section][current.key] = *optval;
+                            _sections[current.section][current.key] = result;
                         })) break;
 
                     if (isDot(ch)) {
@@ -547,7 +584,69 @@ class ini {
 
                     if (not isDigit(ch)) {
                         throw std::runtime_error(my::format(
-                            "Number must only contain digits:{}:{}",
+                            "Integer must only contain digits in range [0 - 9]:{}:{}",
+                            current.line, current.pos));
+                    }
+
+                    current.value.push_back(ch);
+                    break;
+                }
+
+                case bin_integer: {
+                    if (regularTokenEndHandle(ch, [&current, this]() {
+                            std::bitset<32> tmp(current.value);
+                            _sections[current.section][current.key] = tmp.to_ulong();
+                        })) break;
+
+                    if (not isBinDigit(ch)) {
+                        throw std::runtime_error(my::format(
+                            "Binary integer must only contain 0 and 1 digits:{}:{}",
+                            current.line, current.pos));
+                    }
+
+                    current.value.push_back(ch);
+                    break;
+                }
+
+                case oct_integer: {
+                    if (regularTokenEndHandle(ch, [&current, this]() {
+                            std::istringstream ss(current.value);
+                            int_t result;
+                            ss >> std::oct >> result;
+                            if (not ss) {
+                                throw std::runtime_error(my::format(
+                                    "Value \"{}\" is invalid octal value:{}:{}",
+                                    current.value, current.line, current.pos));
+                            }
+                            _sections[current.section][current.key] = result;
+                        })) break;
+
+                    if (not isOctDigit(ch)) {
+                        throw std::runtime_error(my::format(
+                            "Octal integer must only contain digits in range [0 - 7]:{}:{}",
+                            current.line, current.pos));
+                    }
+
+                    current.value.push_back(ch);
+                    break;
+                }
+
+                case hex_integer: {
+                    if (regularTokenEndHandle(ch, [&current, this]() {
+                            std::istringstream ss(current.value);
+                            int_t result;
+                            ss >> std::hex >> result;
+                            if (not ss) {
+                                throw std::runtime_error(my::format(
+                                    "Value \"{}\" is invalid hexadecimal value:{}:{}",
+                                    current.value, current.line, current.pos));
+                            }
+                            _sections[current.section][current.key] = result;
+                        })) break;
+
+                    if (not isHexDigit(ch)) {
+                        throw std::runtime_error(my::format(
+                            "Hexadecimal integer must only contain digits in range [0 - 9] and chars in range [A - F]:{}:{}",
                             current.line, current.pos));
                     }
 
@@ -557,18 +656,15 @@ class ini {
 
                 case boolean: {
                     if (regularTokenEndHandle(ch, [&current, this]() {
-                            int8_t value = isTrue(current.value)    ? 1
-                                           : isFalse(current.value) ? 0
-                                                                    : 2;
-                            if (value == 2) {
-                                throw std::runtime_error(
-                                    my::format(
-                                        "Value {} is invalid boolean:{}:{}",
-                                        current.value, current.line, current.pos));
+                            std::istringstream ss(current.value);
+                            bool_t result;
+                            ss >> std::boolalpha >> result;
+                            if (not ss) {
+                                throw std::runtime_error(my::format(
+                                    "Value \"{}\" is invalid boolean value:{}:{}",
+                                    current.value, current.line, current.pos));
                             }
-
-                            _sections[current.section][current.key] =
-                                static_cast<bool>(value);
+                            _sections[current.section][current.key] = result;
                         })) break;
 
                     current.value.push_back(ch);
@@ -580,7 +676,7 @@ class ini {
                             if (not isNull(current.value)) {
                                 throw std::runtime_error(
                                     my::format(
-                                        "Value {} is invalid null value:{}:{}",
+                                        "Value \"{}\" is invalid null value:{}:{}",
                                         current.value, current.line, current.pos));
                             }
 
