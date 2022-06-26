@@ -1,16 +1,192 @@
 #include <bitset>
 #include <cassert>
 #include <map>
-#include <my/format/format.hpp>
-#include <my/format/println.hpp>
-#include <my/util/functional.hpp>
-#include <my/util/num_parser.hpp>
 #include <ranges>
 #include <sstream>
 #include <variant>
+//
+#include <my/format/format.hpp>
 
 namespace my {
 
+namespace {
+
+/**
+ * @brief variant visitor overload
+ *
+ * @tparam Ts
+ */
+template <class... Ts>
+struct overload : Ts... { using Ts::operator()...; };
+template <class... Ts>
+overload(Ts...) -> overload<Ts...>;
+
+}  // namespace
+
+/**
+ * @brief My .ini dialect file parser
+ *
+ * Data layout:
+ *     All data layout starts from section declaration
+ *       example:
+ *         [Section]
+ *
+ *     You are allowed to use as many empty lines or spaces before and after
+ *     section declaration as you want
+ *
+ *     Next major data layout is key-value pairs, it is written as follows
+ *       example:
+ *         key = *value*
+ *
+ *     The *value* can be either boolean, string, integer, floating point or null.
+ *
+ *     Comments are ';' or '#' symbol followed by any line of text and can appear
+ *     anywhere else in the data layout except inside of section declaration or key-value pair
+ *       example:
+ *         ; comment here
+ *         [Section] ; here
+ *         ; comment here
+ *         key = "value" ; here
+ *         ; and here
+ *
+ *
+ * Data types:
+ *     null:
+ *       Null values can be set in two ways, either by omitting value at all or
+ *       explicitly writing "null" keyword
+ *         example:
+ *           [Nulls]
+ *           noValueOmitted =
+ *           noValue = null
+ *
+ *     boolean:
+ *       Boolean value is represented either by "true" or "false" keywords
+ *         example:
+ *           [Booleans]
+ *           bValue = true
+ *           bValue2 = false
+
+ *     integer:
+ *       Integer is parsed with default c++ std::istream operator>> and can be either
+ *       decimal, octal, binary or hexadecimal
+ *       Also it is allowed to use prefix minus and plus
+ *         example:
+ *           [Integers]
+ *           iDecimal = 42
+ *           iHexadecimal = 0xDEADBEEF
+ *           iOctal = 0o1471
+ *           iBinary = 0b101010
+ *           iNegative = -1022
+ *           iPositive = +1011
+
+ *     floating point:
+ *       Floating point numbers as well as integers are parsed with default std::istream operator>>
+ *       and can have plus minus sign, exponent and dot in the beginning and end of number
+ *         example:
+ *           [Floats]
+ *           fFrontDot = .42
+ *           fBackDot = 42.
+ *           fExponent = 42e4
+ *           fExponentWithDot = 4.2e4
+ *           fLargeExponent = 4.2E2
+ *           fNegative = -4.2
+ *           fPositive = +4.2
+ *
+ *     string:
+ *       String is represented as value inside of quotes (""), all chars inside of string read as-is,
+ *       to preserve quote sign itself use \" construction.
+ *       It behaves similarly to R() string literal except quote preservation
+ *         example:
+ *           [Strings]
+ *           sValue = "The quick brown fox jumps over the \"lazy\" dog"
+ *
+ * Reading data from ini:
+ *      All data inside of inner container is stored as std::variant so in order
+ *      to retrieve data from it you need to use std::get function
+ *      my::ini class declares usings for each type used.
+ *        example:
+ *          using my::literals;
+ *          auto data = R"(
+ *              [Floats]
+ *              fFrontDot = .42
+ *              fBackDot = 42.
+ *              fExponent = 42e4
+ *              fExponentWithDot = 4.2e4
+ *              fLargeExponent = 4.2E2
+ *              fNegative = -4.2
+ *              fPositive = +4.2
+ *          )"_ini;
+ *          auto value = std::get<my::ini::float_t>(data["Floats"]["fNegative"]); // stores -4.2
+ *
+ * Parsing data:
+ *      To parse data using ini class you have several possible possibilities.
+ *      Using read() method with stream:
+ *        my::ini usingReadMethod;
+ *        std::ifstream in("ini-file.ini");
+ *        usingReadMethod.read(in);
+ *
+ *      Using operator>>():
+ *        my::ini usingOperator;
+ *        in >> usingOperator;
+ *
+ *      Using read method with string:
+ *        my::ini usingString;
+ *        std::string str = "[Section]\nbValue = true";
+ *        usingString.read(str);
+ *
+ *      Using constructor from stream:
+ *        my::ini usingConstructor(in);
+ *
+ *      Using constructor from string:
+ *        my::ini usingStrConstructor(in);
+ *
+ *  Serializing data:
+ *      There is also several methods to serialize data back into string
+ *
+ *      Using write() method, it only accepts stream where to print:
+ *        my::ini data;
+ *        data.write(std::cout);
+ *
+ *      Using dump() method:
+ *        my::ini data;
+ *        std::string result = data.dump();
+ *
+ * Merge patch:
+ *      Just like stl::map, my::ini also has method merge()
+ *      The behaviour of this function is the following:
+ *          If key was already in target ini file then it will be overriden
+ *          with value of other ini, else it will be inserted
+ *          If section wasn't in target file it will be copied completely
+ *        example:
+ *          auto first = R"(
+ *              [Section1]
+ *              value1 = true
+ *
+ *              [Section2]
+ *              value1 = false
+ *          )"_ini;
+ *
+ *          auto second = R"(
+ *              [Section1]
+ *              value1 = false
+ *
+ *              [Section3]
+ *              value1 = null
+ *          )"_ini;
+ *
+ *          first.merge(second);
+ *
+ *      After this operation contents of "first" is:
+ *      [Section1]
+ *      value1 = false
+ *
+ *      [Section2]
+ *      value1 = false
+ *
+ *      [Section3]
+ *      value1 = null
+ *
+ */
 class ini {
    public:
     using bool_t = bool;
@@ -162,7 +338,7 @@ class ini {
      * @param os reference to stream where to print data
      */
     void write(std::ostream& os) const {
-        auto value_visitor = my::overload(
+        auto value_visitor = overload(
             [&os](bool_t val) { os << (val ? "true" : "false"); },
             [&os](null_t val) { os << "null"; },
             [&os](int_t val) { os << val; },
@@ -201,28 +377,6 @@ class ini {
      * @param is reference to stream from which to parse data
      */
     void read(std::istream& is) {
-        enum {
-            maybe_empty_line,
-            consume_trailing_space,
-            begin,
-
-            section,
-
-            key,
-            key_value_delim,
-            comment,
-
-            value_begin,
-            string,
-            floating,
-            integer,
-            bin_integer,
-            oct_integer,
-            hex_integer,
-            boolean,
-            null_value,
-        } state = begin;
-
         static auto isSectionOpen = [](char_t ch) -> bool { return ch == '['; };
         static auto isSectionClose = [](char_t ch) -> bool { return ch == ']'; };
         static auto isQuote = [](char_t ch) -> bool { return ch == '"'; };
@@ -258,7 +412,6 @@ class ini {
         static auto isSpace = [](char_t ch) -> bool { return ch == ' ' or
                                                              ch == '\t'; };
         static auto isEquals = [](char_t ch) -> bool { return ch == '='; };
-
         static auto isTrueStart = [](char_t ch) -> bool { return ch == 't'; };
         static auto isFalseStart = [](char_t ch) -> bool { return ch == 'f'; };
         static auto isNullStart = [](char_t ch) -> bool { return ch == 'n'; };
@@ -275,7 +428,30 @@ class ini {
             return value == "null";
         };
 
+        enum State {
+            maybe_empty_line,
+            consume_trailing_space,
+            begin,
+
+            section,
+
+            key,
+            key_value_delim,
+            comment,
+
+            value_begin,
+            string,
+            floating,
+            integer,
+            bin_integer,
+            oct_integer,
+            hex_integer,
+            boolean,
+            null_value,
+        };
+
         struct {
+            State state = begin;
             string_t section = "";
             string_t key = "";
             string_t value = "";
@@ -293,28 +469,27 @@ class ini {
 
         } current;
 
-        static auto regularTokenEndHandle =
-            [&state, &current](char_t ch, auto finalize) -> bool {
-            static auto finalizeImpl = [&finalize, &current]() {
-                finalize();
-                current.resetKeyValue();
-            };
-
+        static auto regularTokenEndHandle = [](char_t ch,
+                                               auto& current,
+                                               auto finalize) -> bool {
             if (isSpace(ch)) {
-                finalizeImpl();
-                state = consume_trailing_space;
+                finalize(current);
+                current.resetKeyValue();
+                current.state = consume_trailing_space;
                 return true;
             }
 
             if (isComment(ch)) {
-                finalizeImpl();
-                state = comment;
+                finalize(current);
+                current.resetKeyValue();
+                current.state = comment;
                 return true;
             }
 
             if (isEndline(ch)) {
-                finalizeImpl();
-                state = maybe_empty_line;
+                finalize(current);
+                current.resetKeyValue();
+                current.state = maybe_empty_line;
                 return true;
             }
 
@@ -334,19 +509,19 @@ class ini {
             }
             ++current.pos;
 
-            switch (state) {
+            switch (current.state) {
                 case begin: {
                     if (isEndline(ch) or isSpace(ch)) {
                         break;
                     }
 
                     if (isComment(ch)) {
-                        state = comment;
+                        current.state = comment;
                         break;
                     }
 
                     if (isSectionOpen(ch)) {
-                        state = section;
+                        current.state = section;
                         break;
                     }
 
@@ -362,7 +537,7 @@ class ini {
                                 "Section name must not be empty:{}:{}",
                                 current.line, current.pos));
                         }
-                        state = consume_trailing_space;
+                        current.state = consume_trailing_space;
                         break;
                     }
 
@@ -380,26 +555,26 @@ class ini {
                     if (isEndline(ch) or isSpace(ch)) break;
                     if (isSectionOpen(ch)) {
                         current.resetSection();
-                        state = section;
+                        current.state = section;
                         break;
                     }
                     if (isComment(ch)) {
-                        state = comment;
+                        current.state = comment;
                         break;
                     }
                     current.key.push_back(ch);
-                    state = key;
+                    current.state = key;
                     break;
                 }
 
                 case consume_trailing_space: {
                     if (isSpace(ch)) break;
                     if (isComment(ch)) {
-                        state = comment;
+                        current.state = comment;
                         break;
                     }
                     if (isEndline(ch)) {
-                        state = maybe_empty_line;
+                        current.state = maybe_empty_line;
                         break;
                     }
                     throw std::runtime_error(
@@ -420,7 +595,7 @@ class ini {
                                 my::format("Key must not be empty:{}:{}",
                                            current.line, current.pos));
                         }
-                        state = key_value_delim;
+                        current.state = key_value_delim;
                         break;
                     }
 
@@ -430,7 +605,7 @@ class ini {
                                 my::format("Key must not be empty:{}:{}",
                                            current.line, current.pos));
                         }
-                        state = value_begin;
+                        current.state = value_begin;
                         break;
                     }
 
@@ -448,7 +623,7 @@ class ini {
                     if (isSpace(ch)) break;
 
                     if (isEquals(ch)) {
-                        state = value_begin;
+                        current.state = value_begin;
                         break;
                     }
 
@@ -460,54 +635,54 @@ class ini {
                 case value_begin: {
                     if (isSpace(ch)) break;
 
-                    if (regularTokenEndHandle(ch, [&current, this]() {
-                            _sections[current.section][current.key] = null_t{};
+                    if (regularTokenEndHandle(ch, current, [this](auto& curr) {
+                            _sections[curr.section][curr.key] = null_t{};
                         })) break;
 
                     if (isQuote(ch)) {
-                        state = string;
+                        current.state = string;
                         break;
                     }
 
                     if (isHexStart(ch, is.peek())) {
                         is.get();
-                        state = hex_integer;
+                        current.state = hex_integer;
                         break;
                     }
 
                     if (isBinStart(ch, is.peek())) {
                         is.get();
-                        state = bin_integer;
+                        current.state = bin_integer;
                         break;
                     }
 
                     if (isOctStart(ch, is.peek())) {
                         is.get();
-                        state = oct_integer;
+                        current.state = oct_integer;
                         break;
                     }
 
                     if (isDigit(ch) or isMinus(ch) or isPlus(ch)) {
                         current.value.push_back(ch);
-                        state = integer;
+                        current.state = integer;
                         break;
                     }
 
                     if (isDot(ch)) {
                         current.value.push_back(ch);
-                        state = floating;
+                        current.state = floating;
                         break;
                     }
 
                     if (isTrueStart(ch) or isFalseStart(ch)) {
                         current.value.push_back(ch);
-                        state = boolean;
+                        current.state = boolean;
                         break;
                     }
 
                     if (isNullStart(ch)) {
                         current.value.push_back(ch);
-                        state = null_value;
+                        current.state = null_value;
                         break;
                     }
 
@@ -518,7 +693,7 @@ class ini {
 
                 case comment: {
                     if (isEndline(ch)) {
-                        state = maybe_empty_line;
+                        current.state = maybe_empty_line;
                     }
                     break;
                 }
@@ -527,7 +702,7 @@ class ini {
                     if (isQuote(ch)) {
                         _sections[current.section][current.key] = current.value;
                         current.resetKeyValue();
-                        state = consume_trailing_space;
+                        current.state = consume_trailing_space;
                         break;
                     }
 
@@ -541,22 +716,23 @@ class ini {
                 }
 
                 case floating: {
-                    if (regularTokenEndHandle(ch, [&current, this]() {
-                            std::istringstream ss(current.value);
+                    if (regularTokenEndHandle(ch, current, [this](auto& curr) {
+                            std::istringstream ss(curr.value);
                             float_t result;
                             ss >> result;
                             if (not ss) {
                                 throw std::runtime_error(my::format(
                                     "Value \"{}\" is invalid floating point value:{}:{}",
-                                    current.value, current.line, current.pos));
+                                    curr.value, curr.line, curr.pos));
                             }
-                            _sections[current.section][current.key] = result;
+                            _sections[curr.section][curr.key] = result;
                         })) break;
 
-                    if (not(isDigit(ch) or isExponent(ch))) {
+                    if (not(isDigit(ch) or isExponent(ch) or
+                            isPlus(ch) or isMinus(ch))) {
                         throw std::runtime_error(my::format(
-                            "Floating point number must only contain digits [0 - 9] or dot '.':{}:{}",
-                            current.line, current.pos));
+                            "Invalid symbol \"{}\" in floating point number:{}:{}",
+                            ch, current.line, current.pos));
                     }
 
                     current.value.push_back(ch);
@@ -564,21 +740,21 @@ class ini {
                 }
 
                 case integer: {
-                    if (regularTokenEndHandle(ch, [&current, this]() {
-                            std::istringstream ss(current.value);
+                    if (regularTokenEndHandle(ch, current, [this](auto& curr) {
+                            std::istringstream ss(curr.value);
                             int_t result;
                             ss >> result;
                             if (not ss) {
                                 throw std::runtime_error(my::format(
                                     "Value \"{}\" is invalid integral value:{}:{}",
-                                    current.value, current.line, current.pos));
+                                    curr.value, curr.line, curr.pos));
                             }
-                            _sections[current.section][current.key] = result;
+                            _sections[curr.section][curr.key] = result;
                         })) break;
 
                     if (isDot(ch)) {
                         current.value.push_back(ch);
-                        state = floating;
+                        current.state = floating;
                         break;
                     }
 
@@ -593,9 +769,9 @@ class ini {
                 }
 
                 case bin_integer: {
-                    if (regularTokenEndHandle(ch, [&current, this]() {
-                            std::bitset<32> tmp(current.value);
-                            _sections[current.section][current.key] = tmp.to_ulong();
+                    if (regularTokenEndHandle(ch, current, [this](auto& curr) {
+                            std::bitset<32> tmp(curr.value);
+                            _sections[curr.section][curr.key] = tmp.to_ulong();
                         })) break;
 
                     if (not isBinDigit(ch)) {
@@ -609,16 +785,16 @@ class ini {
                 }
 
                 case oct_integer: {
-                    if (regularTokenEndHandle(ch, [&current, this]() {
-                            std::istringstream ss(current.value);
+                    if (regularTokenEndHandle(ch, current, [this](auto& curr) {
+                            std::istringstream ss(curr.value);
                             int_t result;
                             ss >> std::oct >> result;
                             if (not ss) {
                                 throw std::runtime_error(my::format(
                                     "Value \"{}\" is invalid octal value:{}:{}",
-                                    current.value, current.line, current.pos));
+                                    curr.value, curr.line, curr.pos));
                             }
-                            _sections[current.section][current.key] = result;
+                            _sections[curr.section][curr.key] = result;
                         })) break;
 
                     if (not isOctDigit(ch)) {
@@ -632,16 +808,16 @@ class ini {
                 }
 
                 case hex_integer: {
-                    if (regularTokenEndHandle(ch, [&current, this]() {
-                            std::istringstream ss(current.value);
+                    if (regularTokenEndHandle(ch, current, [this](auto& curr) {
+                            std::istringstream ss(curr.value);
                             int_t result;
                             ss >> std::hex >> result;
                             if (not ss) {
                                 throw std::runtime_error(my::format(
                                     "Value \"{}\" is invalid hexadecimal value:{}:{}",
-                                    current.value, current.line, current.pos));
+                                    curr.value, curr.line, curr.pos));
                             }
-                            _sections[current.section][current.key] = result;
+                            _sections[curr.section][curr.key] = result;
                         })) break;
 
                     if (not isHexDigit(ch)) {
@@ -655,16 +831,16 @@ class ini {
                 }
 
                 case boolean: {
-                    if (regularTokenEndHandle(ch, [&current, this]() {
-                            std::istringstream ss(current.value);
+                    if (regularTokenEndHandle(ch, current, [this](auto& curr) {
+                            std::istringstream ss(curr.value);
                             bool_t result;
                             ss >> std::boolalpha >> result;
                             if (not ss) {
                                 throw std::runtime_error(my::format(
                                     "Value \"{}\" is invalid boolean value:{}:{}",
-                                    current.value, current.line, current.pos));
+                                    curr.value, curr.line, curr.pos));
                             }
-                            _sections[current.section][current.key] = result;
+                            _sections[curr.section][curr.key] = result;
                         })) break;
 
                     current.value.push_back(ch);
@@ -672,15 +848,15 @@ class ini {
                 }
 
                 case null_value: {
-                    if (regularTokenEndHandle(ch, [&current, this]() {
-                            if (not isNull(current.value)) {
+                    if (regularTokenEndHandle(ch, current, [this](auto& curr) {
+                            if (not isNull(curr.value)) {
                                 throw std::runtime_error(
                                     my::format(
                                         "Value \"{}\" is invalid null value:{}:{}",
-                                        current.value, current.line, current.pos));
+                                        curr.value, curr.line, curr.pos));
                             }
 
-                            _sections[current.section][current.key] = null_t{};
+                            _sections[curr.section][curr.key] = null_t{};
                         })) break;
 
                     current.value.push_back(ch);
