@@ -13,7 +13,7 @@
 
 namespace my {
 
-template <class StringType,
+template <my::iterable StringType,
           class DelimType,
           class Container = std::vector<StringType>,
           class InserterT = my::inserter_for_t<Container>>
@@ -60,7 +60,7 @@ inline Container split(const StringType &what,
     }
 }
 
-template <class StringType>
+template <my::iterable StringType>
 auto &replaceFirst(StringType &where,
                    const StringType &from, const StringType &to) {
     if (auto pos = where.find(from); pos != StringType::npos)
@@ -68,7 +68,7 @@ auto &replaceFirst(StringType &where,
     return where;
 }
 
-template <class StringType>
+template <my::iterable StringType>
 auto &replaceAll(StringType &where,
                  const StringType &from, const StringType &to) {
     typename StringType::size_type pos = 0;
@@ -80,7 +80,7 @@ auto &replaceAll(StringType &where,
     return where;
 }
 
-template <class StringType>
+template <my::iterable StringType>
 StringType repeat(const StringType &what, size_t n) {
     if (!n) return StringType{};
     if (n == 1) return what;
@@ -92,7 +92,7 @@ StringType repeat(const StringType &what, size_t n) {
     return result;
 }
 
-template <class StringType>
+template <my::iterable StringType>
 auto &padStart(StringType &what, size_t targetLen,
                typename StringType::value_type padding) {
     what.reserve(targetLen);
@@ -101,7 +101,7 @@ auto &padStart(StringType &what, size_t targetLen,
                : what;
 }
 
-template <class StringType>
+template <my::iterable StringType>
 auto &padEnd(StringType &what, size_t targetLen,
              typename StringType::value_type padding) {
     what.reserve(targetLen);
@@ -110,7 +110,7 @@ auto &padEnd(StringType &what, size_t targetLen,
                : what;
 }
 
-template <class StringType>
+template <my::iterable StringType>
 auto &pad(StringType &what, size_t targetLen,
           typename StringType::value_type padding) {
     if (targetLen <= what.size()) return what;
@@ -125,7 +125,7 @@ auto &pad(StringType &what, size_t targetLen,
     return what;
 }
 
-template <class StringType>
+template <my::iterable StringType>
 auto &trimStart(StringType &what, typename StringType::value_type remove = ' ') {
     what.erase(what.begin(),
                std::find_if(what.begin(), what.end(),
@@ -135,7 +135,7 @@ auto &trimStart(StringType &what, typename StringType::value_type remove = ' ') 
     return what;
 }
 
-template <class StringType>
+template <my::iterable StringType>
 auto &trimEnd(StringType &what, typename StringType::value_type remove = ' ') {
     what.erase(std::find_if(what.rbegin(), what.rend(),
                             [remove](auto ch) {
@@ -146,26 +146,26 @@ auto &trimEnd(StringType &what, typename StringType::value_type remove = ' ') {
     return what;
 }
 
-template <class StringType>
+template <my::iterable StringType>
 auto &trim(StringType &what, typename StringType::value_type remove = ' ') {
     return trimEnd(trimStart(what, remove), remove);
 }
 
-template <class StringType>
+template <my::iterable StringType>
 auto &toUpper(StringType &what) {
     std::transform(what.begin(), what.end(), what.begin(),
                    [](auto ch) { return std::toupper(ch); });
     return what;
 }
 
-template <class StringType>
+template <my::iterable StringType>
 auto &toLower(StringType &what) {
     std::transform(what.begin(), what.end(), what.begin(),
                    [](auto ch) { return std::tolower(ch); });
     return what;
 }
 
-template <class StringType>
+template <my::iterable StringType>
 auto &toTitle(StringType &what) {
     bool up = true;
     for (auto &el : what) {
@@ -178,19 +178,15 @@ auto &toTitle(StringType &what) {
 template <class Ch = char,
           class Tr = std::char_traits<Ch>,
           class Al = std::allocator<Ch>,
-          class T>
-auto toString(T &&obj) {
-    static_assert(my::has_print_operator_v<T, std::basic_ostream<Ch, Tr>>);
-    std::basic_stringstream<Ch, Tr, Al> ss;
+          class T, class Ostream = std::basic_stringstream<Ch, Tr, Al>>
+auto toString(T &&obj) requires my::printable<T, Ostream> {
+    Ostream ss;
     ss << std::forward<T>(obj);
     return ss.str();
 }
 
-template <class T,
-          typename std::enable_if_t<(my::has_print_operator_v<T, std::ostream>), bool> = true>
-auto strLength(T &&obj) {
-    return my::toString(std::forward<T>(obj)).size();
-}
+template <class T>
+auto strLength(T &&obj) { return my::toString(std::forward<T>(obj)).size(); }
 
 /**
  * @brief Computes Levenshtein Distance between two strings, useful for spell checkers

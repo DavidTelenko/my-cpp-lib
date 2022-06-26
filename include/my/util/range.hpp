@@ -184,8 +184,6 @@ class range {
             return os;
         }
 
-        const auto it = begin();
-
         buffer << "[";
 
         auto n = m_start;

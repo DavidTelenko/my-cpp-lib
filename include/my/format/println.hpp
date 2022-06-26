@@ -208,8 +208,8 @@ namespace alt {
  * or
  * printf(format_string)(first, second);
  * @note if there is too many arguments for given format assertion will fail
- *       if format contains too many anchors only given amount of arguments will be printed
- *       with prefix format until next anchor
+ *       if format contains too many anchors only given amount of arguments will 
+ *       be printed with prefix format until next anchor
  *       e.g printf("{}, {}, magic {} 42!") << "one" << "two";
  *           will produce the following output "one, two, magic ".
  *
