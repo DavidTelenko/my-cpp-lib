@@ -1,3 +1,9 @@
+#pragma once
+#ifndef MY_INI_HPP
+#define MY_INI_HPP
+
+#include <my/format/format.hpp>
+//
 #include <bitset>
 #include <cassert>
 #include <limits>
@@ -5,8 +11,6 @@
 #include <ranges>
 #include <sstream>
 #include <variant>
-//
-#include <my/format/format.hpp>
 
 namespace my {
 
@@ -943,3 +947,5 @@ auto operator"" _ini(const char* data, size_t) {
 }  // namespace literals
 
 }  // namespace  my
+
+#endif  // MY_INI_HPP
