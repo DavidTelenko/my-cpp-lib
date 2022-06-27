@@ -19,7 +19,7 @@ namespace {
 /**
  * @brief variant visitor overload
  *
- * @tparam Ts
+ * @tparam Ts visitors
  */
 template <class... Ts>
 struct overload : Ts... { using Ts::operator()...; };
@@ -29,7 +29,7 @@ overload(Ts...) -> overload<Ts...>;
 /**
  * @brief Manipulator to print floats without zeroes at the end
  *
- * @tparam T
+ * @tparam T floating point
  */
 template <std::floating_point T>
 struct strip_zeroes {
@@ -61,6 +61,10 @@ struct strip_zeroes {
 
 }  // namespace
 
+/**
+ * @brief exception type thrown when parsing fails
+ *
+ */
 class ini_parse_exception : public std::runtime_error {
    public:
     template <class... Args>
