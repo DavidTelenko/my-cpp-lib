@@ -32,14 +32,14 @@ overload(Ts...) -> overload<Ts...>;
  * @tparam T
  */
 template <std::floating_point T>
-struct stripZeroes {
-    constexpr explicit stripZeroes(T value)
+struct strip_zeroes {
+    constexpr explicit strip_zeroes(T value)
         : _value(value) {
     }
 
     template <class Ch, class Tr>
     friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,
-                            const stripZeroes& obj) {
+                            const strip_zeroes& obj) {
         std::basic_stringstream<Ch, Tr> ss;
 
         ss << std::boolalpha
@@ -60,6 +60,19 @@ struct stripZeroes {
 };
 
 }  // namespace
+
+class ini_parse_exception : public std::runtime_error {
+   public:
+    template <class... Args>
+    explicit ini_parse_exception(const char* format, Args&&... args)
+        : _msg(my::format(format, std::forward<Args>(args)...).data()) {
+    }
+
+    const char* what() const noexcept override { return _msg; }
+
+   private:
+    const char* _msg;
+};
 
 /**
  * @brief My .ini dialect file parser
@@ -86,12 +99,12 @@ struct stripZeroes {
  *         ; comment here
  *         key = "value" ; here
  *         ; and here
- *     
- *     It is ok to repeat sections and values in sections, the general behaviour 
+ *
+ *     It is ok to repeat sections and values in sections, the general behaviour
  *     in such situations defined by map class provided or std::map by default.
  *     With std::map as Map class, behaviour is the following:
- *     If section appears more than once all values will be written into one 
- *     section with this name, if values of section occurs more than once, only 
+ *     If section appears more than once all values will be written into one
+ *     section with this name, if values of section occurs more than once, only
  *     last read value will remain.
  *
  *
@@ -391,7 +404,7 @@ class ini {
             [&os](bool_t val) { os << val; },
             [&os](null_t val) { os << val; },
             [&os](int_t val) { os << val; },
-            [&os](float_t val) { os << stripZeroes(val); },
+            [&os](float_t val) { os << strip_zeroes(val); },
             [&os](const string_t& val) { os << std::quoted(val); });
 
         for (auto&& section : _sections) {
@@ -517,7 +530,6 @@ class ini {
             string_t key = "";
             string_t value = "";
             size_t line = 1;
-            size_t pos = 1;
 
             void resetSection() {
                 section.clear();
@@ -569,11 +581,7 @@ class ini {
             const auto ch = is.get();
 
             // counting lines and chars to print more info in errors
-            if (isEndline(ch)) {
-                current.pos = 1;
-                ++current.line;
-            }
-            ++current.pos;
+            if (isEndline(ch)) ++current.line;
 
             // state machine starts
             switch (current.state) {
@@ -595,9 +603,8 @@ class ini {
                         break;
                     }
 
-                    throw std::runtime_error(
-                        my::format("File must start from section:{}:{}",
-                                   current.line, current.pos));
+                    throw ini_parse_exception("File must start from section:{}",
+                                              current.line);
                 }
 
                 // If open section token was read
@@ -606,9 +613,9 @@ class ini {
                 case section: {
                     if (isSectionClose(ch)) {
                         if (current.section.empty()) {
-                            throw std::runtime_error(my::format(
-                                "Section name must not be empty:{}:{}",
-                                current.line, current.pos));
+                            throw ini_parse_exception(
+                                "Section name must not be empty:{}",
+                                current.line);
                         }
                         _sections[current.section];
                         current.state = consume_trailing_spaces;
@@ -616,10 +623,10 @@ class ini {
                     }
 
                     if (not(isAlpha(ch) or isDigit(ch))) {
-                        throw std::runtime_error(my::format(
+                        throw ini_parse_exception(
                             "Section name must contain only "
-                            "alpha numeric chars:{}:{}",
-                            current.line, current.pos));
+                            "alpha numeric chars:{}",
+                            current.line);
                     }
 
                     current.section.push_back(ch);
@@ -648,10 +655,10 @@ class ini {
                     }
 
                     if (not(isAlpha(ch) or isDigit(ch) or isUnderscore(ch))) {
-                        throw std::runtime_error(
-                            my::format("Key must contain only alpha "
-                                       "numeric chars:{}:{}",
-                                       current.line, current.pos));
+                        throw ini_parse_exception(
+                            "Key must contain only alpha "
+                            "numeric chars:{}",
+                            current.line);
                     }
 
                     current.key.push_back(ch);
@@ -672,10 +679,10 @@ class ini {
                         current.state = maybe_empty_line;
                         break;
                     }
-                    throw std::runtime_error(
-                        my::format("Only trailing spaces, comment or "
-                                   "newline is required after value:{}:{}",
-                                   current.line, current.pos));
+                    throw ini_parse_exception(
+                        "Only trailing spaces, comment or "
+                        "newline is required after value:{}",
+                        current.line);
                 }
 
                 // Simply consume all chars until endline or eof
@@ -694,17 +701,17 @@ class ini {
                 // Equals sign will move us directly to value state
                 case key: {
                     if (isComment(ch)) {
-                        throw std::runtime_error(
-                            my::format("Comments is prohibited inside "
-                                       "of key declaration:{}:{}",
-                                       current.line, current.pos));
+                        throw ini_parse_exception(
+                            "Comments is prohibited inside "
+                            "of key declaration:{}",
+                            current.line);
                     }
 
                     if (isSpace(ch)) {
                         if (current.key.empty()) {
-                            throw std::runtime_error(
-                                my::format("Key must not be empty:{}:{}",
-                                           current.line, current.pos));
+                            throw ini_parse_exception(
+                                "Key must not be empty:{}",
+                                current.line);
                         }
                         current.state = key_value_delim;
                         break;
@@ -712,19 +719,19 @@ class ini {
 
                     if (isEquals(ch)) {
                         if (current.key.empty()) {
-                            throw std::runtime_error(
-                                my::format("Key must not be empty:{}:{}",
-                                           current.line, current.pos));
+                            throw ini_parse_exception(
+                                "Key must not be empty:{}",
+                                current.line);
                         }
                         current.state = value_begin;
                         break;
                     }
 
                     if (not(isAlpha(ch) or isDigit(ch) or isUnderscore(ch))) {
-                        throw std::runtime_error(
-                            my::format("Key must contain only alpha "
-                                       "numeric chars:{}:{}",
-                                       current.line, current.pos));
+                        throw ini_parse_exception(
+                            "Key must contain only alpha "
+                            "numeric chars:{}",
+                            current.line);
                     }
 
                     current.key.push_back(ch);
@@ -741,9 +748,9 @@ class ini {
                         break;
                     }
 
-                    throw std::runtime_error(
-                        my::format("Key must not contain spaces:{}:{}",
-                                   current.line, current.pos));
+                    throw ini_parse_exception(
+                        "Key must not contain spaces:{}",
+                        current.line);
                 }
 
                 // Here we determine what value possibly will be
@@ -813,10 +820,10 @@ class ini {
                         break;
                     }
 
-                    throw std::runtime_error(my::format(
+                    throw ini_parse_exception(
                         "Value must be either quoted string, number, "
-                        "boolean, or null (empty line):{}:{}",
-                        current.line, current.pos));
+                        "boolean, or null (empty line):{}",
+                        current.line);
                 }
 
                 // Parsing string as-is if we receive backslash we lookahead
@@ -851,10 +858,10 @@ class ini {
                             float_t result;
                             ss >> result;
                             if (not ss) {
-                                throw std::runtime_error(my::format(
+                                throw ini_parse_exception(
                                     "Value \"{}\" is invalid floating "
-                                    "point value:{}:{}",
-                                    curr.value, curr.line, curr.pos));
+                                    "point value:{}",
+                                    curr.value, curr.line);
                             }
                             _sections[curr.section][curr.key] = result;
                         })) break;
@@ -865,10 +872,10 @@ class ini {
 
                     if (not(isDigit(ch) or isExponent(ch) or
                             isPlus(ch) or isMinus(ch))) {
-                        throw std::runtime_error(my::format(
+                        throw ini_parse_exception(
                             "Invalid symbol \"{}\" in floating point "
-                            "number:{}:{}",
-                            ch, current.line, current.pos));
+                            "number:{}",
+                            ch, current.line);
                     }
 
                     current.value.push_back(ch);
@@ -884,10 +891,10 @@ class ini {
                             int_t result;
                             ss >> result;
                             if (not ss) {
-                                throw std::runtime_error(my::format(
+                                throw ini_parse_exception(
                                     "Value \"{}\" is invalid integral "
-                                    "value:{}:{}",
-                                    curr.value, curr.line, curr.pos));
+                                    "value:{}",
+                                    curr.value, curr.line);
                             }
                             _sections[curr.section][curr.key] = result;
                         })) break;
@@ -903,10 +910,10 @@ class ini {
                     }
 
                     if (not isDigit(ch)) {
-                        throw std::runtime_error(my::format(
+                        throw ini_parse_exception(
                             "Integer must only contain digits "
-                            "in range [0 - 9]:{}:{}",
-                            current.line, current.pos));
+                            "in range [0 - 9]:{}",
+                            current.line);
                     }
 
                     current.value.push_back(ch);
@@ -927,10 +934,10 @@ class ini {
                     }
 
                     if (not isBinDigit(ch)) {
-                        throw std::runtime_error(my::format(
+                        throw ini_parse_exception(
                             "Binary integer must only contain "
-                            "0 and 1 digits:{}:{}",
-                            current.line, current.pos));
+                            "0 and 1 digits:{}",
+                            current.line);
                     }
 
                     current.value.push_back(ch);
@@ -943,9 +950,9 @@ class ini {
                             int_t result;
                             ss >> std::oct >> result;
                             if (not ss) {
-                                throw std::runtime_error(my::format(
-                                    "Value \"{}\" is invalid octal value:{}:{}",
-                                    curr.value, curr.line, curr.pos));
+                                throw ini_parse_exception(
+                                    "Value \"{}\" is invalid octal value:{}",
+                                    curr.value, curr.line);
                             }
                             _sections[curr.section][curr.key] = result;
                         })) break;
@@ -955,10 +962,10 @@ class ini {
                     }
 
                     if (not isOctDigit(ch)) {
-                        throw std::runtime_error(my::format(
+                        throw ini_parse_exception(
                             "Octal integer must only contain "
-                            "digits in range [0 - 7]:{}:{}",
-                            current.line, current.pos));
+                            "digits in range [0 - 7]:{}",
+                            current.line);
                     }
 
                     current.value.push_back(ch);
@@ -971,9 +978,9 @@ class ini {
                             int_t result;
                             ss >> std::hex >> result;
                             if (not ss) {
-                                throw std::runtime_error(my::format(
-                                    "Value \"{}\" is invalid hexadecimal value:{}:{}",
-                                    curr.value, curr.line, curr.pos));
+                                throw ini_parse_exception(
+                                    "Value \"{}\" is invalid hexadecimal value:{}",
+                                    curr.value, curr.line);
                             }
                             _sections[curr.section][curr.key] = result;
                         })) break;
@@ -983,10 +990,10 @@ class ini {
                     }
 
                     if (not isHexDigit(ch)) {
-                        throw std::runtime_error(my::format(
+                        throw ini_parse_exception(
                             "Hexadecimal integer must only contain digits "
-                            "in range [0 - 9] and chars in range [A - F]:{}:{}",
-                            current.line, current.pos));
+                            "in range [0 - 9] and chars in range [A - F]:{}",
+                            current.line);
                     }
 
                     current.value.push_back(ch);
@@ -1002,9 +1009,9 @@ class ini {
                             bool_t result;
                             ss >> std::boolalpha >> result;
                             if (not ss) {
-                                throw std::runtime_error(my::format(
-                                    "Value \"{}\" is invalid boolean value:{}:{}",
-                                    curr.value, curr.line, curr.pos));
+                                throw ini_parse_exception(
+                                    "Value \"{}\" is invalid boolean value:{}",
+                                    curr.value, curr.line);
                             }
                             _sections[curr.section][curr.key] = result;
                         })) break;
@@ -1016,10 +1023,9 @@ class ini {
                 case null_value: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             if (curr.value != "null") {
-                                throw std::runtime_error(
-                                    my::format(
-                                        "Value \"{}\" is invalid null value:{}:{}",
-                                        curr.value, curr.line, curr.pos));
+                                throw ini_parse_exception(
+                                    "Value \"{}\" is invalid null value:{}",
+                                    curr.value, curr.line);
                             }
 
                             _sections[curr.section][curr.key] = null_t{};
