@@ -107,7 +107,9 @@ struct stripZeroes {
  *     integer:
  *       Integer is parsed with default c++ std::istream operator>> and can be either
  *       decimal, octal, binary or hexadecimal
- *       Also it is allowed to use prefix minus and plus
+ *       It is allowed to use prefix minus and plus
+ *       Also it is allowed to use ' and _ chars as separators, while reading it will be
+ *       simply consumed so you can use it in any quantity and order as you want
  *         example:
  *           [Integers]
  *           iDecimal = 42
@@ -116,6 +118,8 @@ struct stripZeroes {
  *           iBinary = 0b101010
  *           iNegative = -1022
  *           iPositive = +1011
+ *           iSeparated = 1'000'000'000'000
+ *           iSeparated2 = 1_000_000_000_000
 
  *     floating point:
  *       Floating point numbers as well as integers are parsed with default std::istream operator>>
@@ -153,6 +157,7 @@ struct stripZeroes {
  *              fLargeExponent = 4.2E2
  *              fNegative = -4.2
  *              fPositive = +4.2
+ *              fSeparated = 1'000'000'000.0001
  *          )"_ini;
  *          auto value = std::get<my::ini::float_t>(data["Floats"]["fNegative"]); // stores -4.2
  *
@@ -414,6 +419,8 @@ class ini {
      * @param is reference to stream from which to parse data
      */
     void read(std::istream& is) {
+        // giving stuff self explanatory names
+
         static auto isLower = [](char_t ch) -> bool {
             return ch >= 'a' and ch <= 'z';
         };
@@ -444,6 +451,9 @@ class ini {
         static auto isExponent = [](char_t ch) -> bool {
             return ch == 'E' or ch == 'e';
         };
+        static auto isEof = [](char_t ch) -> bool {
+            return ch == std::char_traits<char_t>::eof();
+        };
 
         static auto isSectionOpen = [](char_t ch) -> bool { return ch == '['; };
         static auto isSectionClose = [](char_t ch) -> bool { return ch == ']'; };
@@ -452,6 +462,7 @@ class ini {
         static auto isMinus = [](char_t ch) -> bool { return ch == '-'; };
         static auto isPlus = [](char_t ch) -> bool { return ch == '+'; };
         static auto isUnderscore = [](char_t ch) -> bool { return ch == '_'; };
+        static auto isSingleQuote = [](char_t ch) -> bool { return ch == '\''; };
         static auto isEndline = [](char_t ch) -> bool { return ch == '\n'; };
         static auto isBackslash = [](char_t ch) -> bool { return ch == '\\'; };
         static auto isEquals = [](char_t ch) -> bool { return ch == '='; };
@@ -469,6 +480,8 @@ class ini {
         static auto isOctStart = [](char_t ch, char_t next) -> bool {
             return ch == '0' and next == 'o';
         };
+
+        // all possible states of state machine
 
         enum State {
             maybe_empty_line,
@@ -492,6 +505,10 @@ class ini {
             null_value,
         };
 
+        // all data are in one struct closure
+        // therefore we can pass reference to it
+        // and get all current variables at once
+
         struct {
             State state = begin;
             string_t section = "";
@@ -511,6 +528,8 @@ class ini {
 
         } current;
 
+        // desperate try to limit amount of repetitive code inside
+        // of state handling routines
         static auto regularTokenEndHandle = [](char_t ch, auto& current,
                                                auto finalize) -> bool {
             if (isSpace(ch)) {
@@ -534,23 +553,31 @@ class ini {
                 return true;
             }
 
+            if (isEof(ch)) {
+                finalize(current);
+                current.resetKeyValue();
+                return true;
+            }
+
             return false;
         };
 
         for (;;) {
+            // extract char from stream
             const auto ch = is.get();
 
-            if (is.eof() or is.fail()) {
-                break;
-            }
-
+            // counting lines and chars to print more info in errors
             if (isEndline(ch)) {
                 current.pos = 1;
                 ++current.line;
             }
             ++current.pos;
 
+            // state machine starts
             switch (current.state) {
+                // If we are only starting there is three possible cases
+                // we either got empty line with spaces, comment or section
+                // in any other case we throw
                 case begin: {
                     if (isEndline(ch) or isSpace(ch)) {
                         break;
@@ -571,6 +598,9 @@ class ini {
                                    current.line, current.pos));
                 }
 
+                // If open section token was read
+                // we reading all alpha-numeric chars until it's closed
+                // In case of empty section or non alpha-numeric char we throw
                 case section: {
                     if (isSectionClose(ch)) {
                         if (current.section.empty()) {
@@ -578,6 +608,7 @@ class ini {
                                 "Section name must not be empty:{}:{}",
                                 current.line, current.pos));
                         }
+                        _sections[current.section];
                         current.state = consume_trailing_space;
                         break;
                     }
@@ -593,24 +624,44 @@ class ini {
                     break;
                 }
 
+                // Each next line potentially can be empty or contain spaces
+                // we need to consume it and wait until section token or any
+                // alpha-numeric char appears. In case we received non
+                // alpha-numeric char we throw same error as if we received it in
+                // the key state
                 case maybe_empty_line: {
-                    if (isEndline(ch) or isSpace(ch)) break;
+                    if (isEndline(ch) or
+                        isSpace(ch) or
+                        isEof(ch)) break;
+
                     if (isSectionOpen(ch)) {
                         current.resetSection();
                         current.state = section;
                         break;
                     }
+
                     if (isComment(ch)) {
                         current.state = comment;
                         break;
                     }
+
+                    if (not(isAlpha(ch) or isDigit(ch) or isUnderscore(ch))) {
+                        throw std::runtime_error(
+                            my::format("Key must contain only alpha "
+                                       "numeric chars:{}:{}",
+                                       current.line, current.pos));
+                    }
+
                     current.key.push_back(ch);
                     current.state = key;
                     break;
                 }
 
+                // After each value or section we can receive
+                // trailing spaces, consume it and throw in case there is
+                // something that is not a whitespace, endline or comment
                 case consume_trailing_space: {
-                    if (isSpace(ch)) break;
+                    if (isSpace(ch) or isEof(ch)) break;
                     if (isComment(ch)) {
                         current.state = comment;
                         break;
@@ -625,6 +676,20 @@ class ini {
                                    current.line, current.pos));
                 }
 
+                // Simply consume all chars until endline or eof
+                case comment: {
+                    if (isEof(ch)) break;
+                    if (isEndline(ch)) {
+                        current.state = maybe_empty_line;
+                    }
+                    break;
+                }
+
+                // If we received alpha-numeric char after section or empty line
+                // we end up here
+                // Whitespace char will move us to consuming state of spaces
+                // between last key char and equals sign
+                // Equals sign will move us directly to value state
                 case key: {
                     if (isComment(ch)) {
                         throw std::runtime_error(
@@ -664,6 +729,8 @@ class ini {
                     break;
                 }
 
+                // Consume all spaces until equals sign is found
+                // throw if any other char appears
                 case key_value_delim: {
                     if (isSpace(ch)) break;
 
@@ -677,6 +744,19 @@ class ini {
                                    current.line, current.pos));
                 }
 
+                // Here we determine what value possibly will be
+                // We consume all front spaces until meaningful char appears
+                // If we reached endline or comment we terminating and setting
+                // value to null
+                // If it is quote then we go to string value state
+                // If it is hex, bin or oct starting sequence we go to
+                // appropriate integer state
+                // If it is just a digit or leading plus or minus sign we go to
+                // state simple integer state (with possibility that it is float)
+                // If it is leading dot we go to float state
+                // If it is first char of null, true or false token we go to
+                // respective state
+                // Else we throw
                 case value_begin: {
                     if (isSpace(ch)) break;
 
@@ -737,13 +817,10 @@ class ini {
                         current.line, current.pos));
                 }
 
-                case comment: {
-                    if (isEndline(ch)) {
-                        current.state = maybe_empty_line;
-                    }
-                    break;
-                }
-
+                // Parsing string as-is if we receive backslash we lookahead
+                // if there is quote and insert it in this case
+                // If we reached another quote without backslash we terminating
+                // and consuming trailing spaces (or comment)
                 case string: {
                     if (isQuote(ch)) {
                         _sections[current.section][current.key] = current.value;
@@ -761,6 +838,11 @@ class ini {
                     break;
                 }
 
+                // We receive all supported chars even if it is prohibited,
+                // Then when we reach the end of number we parse it with
+                // standard operator that will handle all errors for us
+                // It would be really tough to prevent repetitive exponent or
+                // plus/minus signs using separate states
                 case floating: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             std::istringstream ss(curr.value);
@@ -775,6 +857,10 @@ class ini {
                             _sections[curr.section][curr.key] = result;
                         })) break;
 
+                    if (isUnderscore(ch) or isSingleQuote(ch)) {
+                        break;
+                    }
+
                     if (not(isDigit(ch) or isExponent(ch) or
                             isPlus(ch) or isMinus(ch))) {
                         throw std::runtime_error(my::format(
@@ -787,6 +873,9 @@ class ini {
                     break;
                 }
 
+                // Read all digits skip all separators if dot is found then
+                // it is float go to appropriate state
+                // If any inappropriate symbol found - throw
                 case integer: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             std::istringstream ss(curr.value);
@@ -800,6 +889,10 @@ class ini {
                             }
                             _sections[curr.section][curr.key] = result;
                         })) break;
+
+                    if (isUnderscore(ch) or isSingleQuote(ch)) {
+                        break;
+                    }
 
                     if (isDot(ch)) {
                         current.value.push_back(ch);
@@ -818,11 +911,18 @@ class ini {
                     break;
                 }
 
+                // bin, hex, oct states are basically all the same
+                // skip separators, throw if not appropriate digit
+                // parse using standard io method
                 case bin_integer: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             std::bitset<32> tmp(curr.value);
                             _sections[curr.section][curr.key] = tmp.to_ulong();
                         })) break;
+
+                    if (isUnderscore(ch) or isSingleQuote(ch)) {
+                        break;
+                    }
 
                     if (not isBinDigit(ch)) {
                         throw std::runtime_error(my::format(
@@ -848,6 +948,10 @@ class ini {
                             _sections[curr.section][curr.key] = result;
                         })) break;
 
+                    if (isUnderscore(ch) or isSingleQuote(ch)) {
+                        break;
+                    }
+
                     if (not isOctDigit(ch)) {
                         throw std::runtime_error(my::format(
                             "Octal integer must only contain "
@@ -872,6 +976,10 @@ class ini {
                             _sections[curr.section][curr.key] = result;
                         })) break;
 
+                    if (isUnderscore(ch) or isSingleQuote(ch)) {
+                        break;
+                    }
+
                     if (not isHexDigit(ch)) {
                         throw std::runtime_error(my::format(
                             "Hexadecimal integer must only contain digits "
@@ -883,6 +991,9 @@ class ini {
                     break;
                 }
 
+                // boolean and null are keywords so we parse them in a similar
+                // fashion if end reached check if value read is appropriate
+                // keyword insert parsed value throw otherwise
                 case boolean: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             std::istringstream ss(curr.value);
@@ -916,6 +1027,11 @@ class ini {
                     break;
                 }
             }
+
+            // if reached the end or got error break from the loop
+            // we need to process eof before leaving so each state can
+            // finalize normally
+            if (is.eof() or is.fail()) break;
         }
     }
 
