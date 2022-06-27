@@ -86,6 +86,13 @@ struct stripZeroes {
  *         ; comment here
  *         key = "value" ; here
  *         ; and here
+ *     
+ *     It is ok to repeat sections and values in sections, the general behaviour 
+ *     in such situations defined by map class provided or std::map by default.
+ *     With std::map as Map class, behaviour is the following:
+ *     If section appears more than once all values will be written into one 
+ *     section with this name, if values of section occurs more than once, only 
+ *     last read value will remain.
  *
  *
  * Data types:
@@ -420,7 +427,6 @@ class ini {
      */
     void read(std::istream& is) {
         // giving stuff self explanatory names
-
         static auto isLower = [](char_t ch) -> bool {
             return ch >= 'a' and ch <= 'z';
         };
@@ -482,19 +488,16 @@ class ini {
         };
 
         // all possible states of state machine
-
         enum State {
             maybe_empty_line,
-            consume_trailing_space,
+            consume_trailing_spaces,
+            key_value_delim,
+            value_begin,
             begin,
 
             section,
-
-            key,
-            key_value_delim,
             comment,
-
-            value_begin,
+            key,
             string,
             floating,
             integer,
@@ -508,7 +511,6 @@ class ini {
         // all data are in one struct closure
         // therefore we can pass reference to it
         // and get all current variables at once
-
         struct {
             State state = begin;
             string_t section = "";
@@ -535,7 +537,7 @@ class ini {
             if (isSpace(ch)) {
                 finalize(current);
                 current.resetKeyValue();
-                current.state = consume_trailing_space;
+                current.state = consume_trailing_spaces;
                 return true;
             }
 
@@ -609,7 +611,7 @@ class ini {
                                 current.line, current.pos));
                         }
                         _sections[current.section];
-                        current.state = consume_trailing_space;
+                        current.state = consume_trailing_spaces;
                         break;
                     }
 
@@ -660,7 +662,7 @@ class ini {
                 // After each value or section we can receive
                 // trailing spaces, consume it and throw in case there is
                 // something that is not a whitespace, endline or comment
-                case consume_trailing_space: {
+                case consume_trailing_spaces: {
                     if (isSpace(ch) or isEof(ch)) break;
                     if (isComment(ch)) {
                         current.state = comment;
@@ -825,7 +827,7 @@ class ini {
                     if (isQuote(ch)) {
                         _sections[current.section][current.key] = current.value;
                         current.resetKeyValue();
-                        current.state = consume_trailing_space;
+                        current.state = consume_trailing_spaces;
                         break;
                     }
 
