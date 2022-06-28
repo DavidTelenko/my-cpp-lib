@@ -52,71 +52,37 @@ finally(F &&f) noexcept {
     return FinalAction<my::value_from_t<F>>(std::forward<F>(f));
 }
 
-// various miscellaneous stuff
+/**
+ * @brief Non copyable mixin
+ *
+ * @tparam T crtp link
+ */
+template <class T>
+class NonCopyable {
+   public:
+    NonCopyable(const NonCopyable &) = delete;
+    T &operator=(const T &) = delete;
 
-template <class PairT, class WidthT>
-PairT twoDimensionalIndex(size_t index, WidthT width) {
-    return {index % width, index / width};
-}
-
-template <class PairT, class WidthT, class CoordGetter>
-size_t oneDimensionalIndex(PairT point, WidthT width,
-                           CoordGetter first, CoordGetter second) {
-    return first(point) + (second(point) * width);  // first / i / x, second / j / y
-}
-
-template <class PairT, class WidthT, class CoordGetter>
-size_t oneDimensionalIndex(PairT point, WidthT width) {
-    return point.x + (point.y * width);  // first / i / x, second / j / y
-}
-
-// AssociativeContainer methods
+   protected:
+    NonCopyable() = default;
+    ~NonCopyable() = default;
+};
 
 /**
- * @brief Checks wether container contains key
+ * @brief Non movable mixin
  *
- * @tparam AssociativeContainer concept
- * @param container AssociativeContainer concept const&
- * @param key AssociativeContainer::key_type value to search for
- * @return true if container contains key
+ * @tparam T crtp link
  */
-template <class AssociativeContainer,
-          class Key = typename AssociativeContainer::key_type,
-          class Value = typename AssociativeContainer::mapped_type>
-constexpr bool containsKey(const AssociativeContainer &container, Key &&key) {
-    const auto it = container.find(std::forward<Key>(key));
-    return (it != end(container));
-}
+template <class T>
+class NonMovable {
+   public:
+    NonMovable(NonMovable &&) = delete;
+    T &operator=(T &&) = delete;
 
-// bit logic + reinterpret
-
-template <my::arithmetic Number>
-constexpr bool
-isPowerOf2(Number n) {
-    if constexpr (std::is_integral_v<Number>) {
-        return n > 0 and n & (n - 1) == 0;
-    } else {
-        int32_t exponent;
-        const Number mantissa = std::frexp(n, &exponent);
-        return mantissa == Number{0.5};
-    }
-}
-
-/**
- * @see https://stackoverflow.com/questions/47981/how-do-you-set-clear-and-toggle-a-single-bit
- *
- */
-template <std::integral Number>
-constexpr void set_bit(Number &number, Number bit) { number |= 1UL << bit; }
-
-template <std::integral Number>
-constexpr void clear_bit(Number &number, Number bit) { number &= ~(1UL << bit); }
-
-template <std::integral Number>
-constexpr void toggle_bit(Number &number, Number bit) { number ^= 1UL << bit; }
-
-template <std::integral Number>
-constexpr bool check_bit(Number number, Number bit) { return (number >> bit) & 1U; }
+   protected:
+    NonMovable() = default;
+    ~NonMovable() = default;
+};
 
 }  // namespace my
 

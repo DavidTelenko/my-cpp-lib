@@ -650,5 +650,49 @@ constexpr int64_t binpow(int64_t a, int64_t n, int64_t m) {
     return res % m;
 }
 
+template <class PairT, class WidthT>
+PairT twoDimensionalIndex(size_t index, WidthT width) {
+    return {index % width, index / width};
+}
+
+template <class PairT, class WidthT, class CoordGetter>
+size_t oneDimensionalIndex(PairT point, WidthT width,
+                           CoordGetter first, CoordGetter second) {
+    return first(point) + (second(point) * width);  // first / i / x, second / j / y
+}
+
+template <class PairT, class WidthT, class CoordGetter>
+size_t oneDimensionalIndex(PairT point, WidthT width) {
+    return point.x + (point.y * width);
+}
+
+template <my::arithmetic Number>
+constexpr bool
+isPowerOf2(Number n) {
+    if constexpr (std::is_integral_v<Number>) {
+        return not(n > 0 and n & (n - 1));
+    } else {
+        int32_t exponent;
+        const Number mantissa = std::frexp(n, &exponent);
+        return mantissa == Number{0.5};
+    }
+}
+
+/**
+ * @see https://stackoverflow.com/questions/47981/how-do-you-set-clear-and-toggle-a-single-bit
+ *
+ */
+template <std::integral Number>
+constexpr void setBit(Number &number, Number bit) { number |= 1UL << bit; }
+
+template <std::integral Number>
+constexpr void clearBit(Number &number, Number bit) { number &= ~(1UL << bit); }
+
+template <std::integral Number>
+constexpr void toggleBit(Number &number, Number bit) { number ^= 1UL << bit; }
+
+template <std::integral Number>
+constexpr bool checkBit(Number number, Number bit) { return (number >> bit) & 1U; }
+
 }  // namespace my
 #endif  // MY_MATH_HPP
