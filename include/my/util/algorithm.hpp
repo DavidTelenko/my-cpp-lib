@@ -70,7 +70,7 @@ majority(const Container &container, BiPredicate pred = BiPredicate{}) {
 namespace detail {
 
 template <class T, class Size>
-struct default_generate_construct {
+struct DefaultGenerateConstruct {
     T operator()(Size size) { return T(size); }
 };
 
@@ -90,7 +90,7 @@ struct default_generate_construct {
  * @return my::require_iterable<Container>
  */
 template <my::iterable Container, std::integral Size, class Generator,
-          class Construct = detail::default_generate_construct<Container, Size>>
+          class Construct = detail::DefaultGenerateConstruct<Container, Size>>
 Container generate(Generator gen, Size size,
                    Construct construct = Construct{}) {
     using std::begin;
@@ -205,7 +205,7 @@ namespace detail {
 template <class Result, std::input_iterator InIt,
           class UnaryOperator, class Inserter,
           std::input_iterator... Iterators>
-constexpr auto transform_impl(InIt first, InIt last, Result &result,
+constexpr auto transformImpl(InIt first, InIt last, Result &result,
                               UnaryOperator f, Inserter insert,
                               Iterators... rest) {
     for (; first != last; ++first, (++rest, ...)) {
@@ -231,7 +231,7 @@ constexpr Result transform(const Container &container, UnaryOperator f,
     if constexpr (my::reservable<Result, size_t>) {
         result.reserve(size(container));
     }
-    detail::transform_impl(begin(container), end(container), result,
+    detail::transformImpl(begin(container), end(container), result,
                            std::move(f), std::move(insert), begin(rest)...);
     return result;
 }
