@@ -3,6 +3,7 @@
 #define MY_COLOR_HPP
 
 #include <cstdint>
+#include <iostream>
 
 namespace my {
 
