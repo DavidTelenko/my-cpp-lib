@@ -2,47 +2,13 @@
 #ifndef MY_COLOR_FORMAT_HPP
 #define MY_COLOR_FORMAT_HPP
 
-#include <my/format/color_presets.hpp>
 #include <my/format/format.hpp>
+#include <my/util/color.hpp>
 #include <my/util/utils.hpp>
 //
 #include <iostream>
 
 namespace my {
-
-/**
- * @brief canonical color structure with 3 uint8_t as r, g, b values
- *
- */
-struct Color {
-    using enum color;
-
-    constexpr Color(uint8_t rgb = 0)
-        : r(rgb), g(rgb), b(rgb) {}
-
-    constexpr Color(uint8_t r, uint8_t g, uint8_t b)
-        : r(r), g(g), b(b) {}
-
-    constexpr Color(my::color c)
-        : Color(fromHex(static_cast<uint32_t>(c))) {}
-
-    static constexpr uint32_t toHex(Color c) {
-        return (static_cast<uint32_t>(c.r) << 16) |
-               (static_cast<uint32_t>(c.g) << 8) | c.b;
-    }
-
-    static constexpr Color fromHex(uint32_t hex) {
-        return Color(((hex >> 16) & 0xFF),
-                     ((hex >> 8) & 0xFF),
-                     (hex & 0xFF));
-    }
-
-    constexpr bool operator==(uint32_t hex) { return toHex(*this) == hex; }
-    constexpr bool operator!=(uint32_t hex) { return !(*this == hex); }
-
-    uint8_t r, g, b;
-};
-
 /**
  * @brief Sets foreground into os
  *

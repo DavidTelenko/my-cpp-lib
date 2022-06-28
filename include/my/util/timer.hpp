@@ -6,6 +6,7 @@
 //
 #include <cassert>
 #include <chrono>
+#include <functional>
 
 namespace my {
 
@@ -58,6 +59,17 @@ class Timer {
     std::chrono::high_resolution_clock::time_point _lastTime;
     bool _stopped = true;
 };
+
+template <class F, class... Args>
+[[nodiscard]] auto timeit(F function, Args&&... args) {
+    using namespace std::chrono;
+
+    const auto prev = high_resolution_clock::now();
+    std::invoke(function, std::forward<Args>(args)...);
+    const auto curr = high_resolution_clock::now();
+
+    return curr - prev;
+}
 
 }  // namespace my
 

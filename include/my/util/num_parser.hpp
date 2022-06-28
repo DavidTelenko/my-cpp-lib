@@ -1369,7 +1369,7 @@ inline constexpr Number parse(std::string_view str, const char *err) {
 
 /**
  * @brief Parses number to specified precision.
- * Any inapropriate char values will immediately
+ * Any inappropriate char values will immediately
  * cause an error or UB. No whitespaces will be cleared,
  * it is users responsibility to do that.
  *

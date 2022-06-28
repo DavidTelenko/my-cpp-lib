@@ -15,25 +15,25 @@ namespace my {
  * @tparam Function callable
  */
 template <class Function>
-struct lambda_from {
+struct lambdaFrom {
    private:
-    using Func_ = my::make_member_function_t<Function>;
+    using Func = my::make_member_function_t<Function>;
 
    public:
-    constexpr explicit lambda_from(Function function) noexcept
-        : f_(std::move(function)) {
+    constexpr explicit lambdaFrom(Function function) noexcept
+        : _func(std::move(function)) {
     }
 
     template <class... Args>
-    requires std::is_invocable_v<Func_, Args...>
+    requires std::is_invocable_v<Func, Args...>
     constexpr decltype(auto)
     operator()(Args &&...args) noexcept(
-        std::is_nothrow_invocable_v<Func_, Args...>) {
-        return std::invoke(f_, std::forward<Args>(args)...);
+        std::is_nothrow_invocable_v<Func, Args...>) {
+        return std::invoke(_func, std::forward<Args>(args)...);
     }
 
    private:
-    Func_ f_;
+    Func _func;
 };
 
 /**
@@ -43,23 +43,27 @@ struct lambda_from {
  * @tparam Function
  */
 template <class Identity, my::value Function>
-struct fold_with {
-    constexpr fold_with(Identity identity, Function func)
-        : identity_(std::move(identity)),
-          func_(std::move(func)) {}
+struct foldWith {
+   private:
+    using Func = my::make_member_function_t<Function>;
+
+   public:
+    constexpr foldWith(Identity identity, Function func)
+        : _identity(std::move(identity)),
+          _func(std::move(func)) {}
 
     template <std::common_with<Identity>... Args>
     constexpr auto
     operator()(Args &&...args) const {
-        auto accum = identity_;
-        return ((accum = std::invoke(func_, std::move(accum),
+        auto accum = _identity;
+        return ((accum = std::invoke(_func, std::move(accum),
                                      std::forward<Args>(args))),
                 ...);
     }
 
    private:
-    Identity identity_;
-    my::make_member_function_t<Function> func_;
+    Identity _identity;
+    Func _func;
 };
 
 /**
@@ -68,24 +72,24 @@ struct fold_with {
  * @tparam Function
  */
 template <my::value Function>
-struct reducer_from {
+struct reducerFrom {
    private:
-    using Func_ = my::make_member_function_t<Function>;
+    using Func = my::make_member_function_t<Function>;
 
    public:
-    constexpr explicit reducer_from(Function func)
-        : func_(std::move(func)) {}
+    constexpr explicit reducerFrom(Function func)
+        : _func(std::move(func)) {}
 
     template <class Accum, class... Args>
-    requires std::invocable<Func_, std::add_lvalue_reference_t<Accum>,
+    requires std::invocable<Func, std::add_lvalue_reference_t<Accum>,
                             Args...>
     constexpr void
     operator()(Accum &accum, Args &&...args) const {
-        (std::invoke(func_, accum, std::forward<Args>(args)), ...);
+        (std::invoke(_func, accum, std::forward<Args>(args)), ...);
     }
 
    private:
-    Func_ func_;
+    Func _func;
 };
 
 /**
@@ -107,17 +111,17 @@ struct average {
  * @tparam Number
  */
 template <std::integral Number>
-struct is_divisible_by {
-    constexpr explicit is_divisible_by(Number n)
-        : n_(n) {}
+struct isDivisibleBy {
+    constexpr explicit isDivisibleBy(Number number)
+        : _number(number) {}
 
     constexpr bool
     operator()(std::convertible_to<Number> auto e) const noexcept {
-        return e % n_ == 0;
+        return e % _number == 0;
     }
 
    private:
-    Number n_;
+    Number _number;
 };
 
 /**
@@ -126,18 +130,18 @@ struct is_divisible_by {
  * @tparam T
  */
 template <class T>
-struct equal_to_value {
-    constexpr explicit equal_to_value(T value)
-        : value_(std::move(value)) {}
+struct equalToValue {
+    constexpr explicit equalToValue(T value)
+        : _value(std::move(value)) {}
 
     template <std::equality_comparable_with<T> U>
     constexpr bool
     operator()(U &&e) const noexcept {
-        return std::forward<U>(e) == value_;
+        return std::forward<U>(e) == _value;
     }
 
-private:
-    T value_;
+   private:
+    T _value;
 };
 
 /**
@@ -147,6 +151,10 @@ private:
  */
 template <my::value Predicate>
 struct negate {
+   private:
+    using Pred = my::make_member_function_t<Predicate>;
+
+   public:
     constexpr explicit negate(Predicate predicate)
         : predicate_(std::move(predicate)) {
     }
@@ -158,7 +166,7 @@ struct negate {
     }
 
    private:
-    my::make_member_function_t<Predicate> predicate_;
+    Pred predicate_;
 };
 
 template <class F, class P, class... Args>
@@ -191,25 +199,25 @@ concept invocable_with_projection =
 template <my::value Functor, my::value Projection>
 struct project {
    private:
-    using Func_ = my::make_member_function_t<Functor>;
-    using Proj_ = my::make_member_function_t<Projection>;
+    using Func = my::make_member_function_t<Functor>;
+    using Proj = my::make_member_function_t<Projection>;
 
    public:
     constexpr explicit project(Functor func, Projection proj)
-        : func_(std::move(func)), proj_(std::move(proj)) {
+        : _func(std::move(func)), proj_(std::move(proj)) {
     }
 
     template <class... Args>
-    requires invocable_with_projection<Func_, Proj_, Args...>
+    requires invocable_with_projection<Func, Proj, Args...>
     constexpr decltype(auto)
     operator()(Args &&...args) const noexcept {
-        return std::invoke(func_, std::invoke(proj_,
+        return std::invoke(_func, std::invoke(proj_,
                                               std::forward<Args>(args))...);
     }
 
    private:
-    Func_ func_;
-    Proj_ proj_;
+    Func _func;
+    Proj proj_;
 };
 
 /**
@@ -236,12 +244,12 @@ struct project {
  * @tparam BiPred Binary Predicate
  * @tparam Proj Projection function or field defaults down to std::identity
  */
-template <my::value BiPred = std::less<void>,
-          my::value Proj = std::identity>
+template <my::value BiPredicate = std::less<void>,
+          my::value Projection = std::identity>
 struct compare {
    private:
-    using Pred_ = my::make_member_function_t<BiPred>;
-    using Proj_ = my::make_member_function_t<Proj>;
+    using Pred = my::make_member_function_t<BiPredicate>;
+    using Proj = my::make_member_function_t<Projection>;
 
    public:
     /**
@@ -250,15 +258,18 @@ struct compare {
      * and projection function (std::identity by default)
      *
      */
-    constexpr explicit compare(BiPred f = {}, Proj p = {}) noexcept
-        : f_(std::move(f)), p_(std::move(p)) {
+    constexpr explicit compare(BiPredicate f = {},
+                               Projection p = {}) noexcept
+        : _func(std::move(f)), _pred(std::move(p)) {
     }
 
     template <class T, class U>
-    requires my::invocable_with_projection<Pred_, Proj_, T, U>
+    requires my::invocable_with_projection<BiPredicate, Projection, T, U>
     constexpr bool
     operator()(const T &a, const U &b) const {
-        return std::invoke(f_, std::invoke(p_, a), std::invoke(p_, b));
+        return std::invoke(_func,
+                           std::invoke(_pred, a),
+                           std::invoke(_pred, b));
     }
 
     /**
@@ -302,8 +313,8 @@ struct compare {
     }
 
    private:
-    Pred_ f_;
-    Proj_ p_;
+    Pred _func;
+    Proj _pred;
 };
 
 /**
@@ -341,7 +352,7 @@ overload(Ts...) -> overload<Ts...>;
  * @brief
  *
  */
-class back_inserter {
+class BackInserter {
    public:
     template <my::iterable Container, std::common_with<
                                           my::value_t<Container>>
@@ -355,7 +366,7 @@ class back_inserter {
  * @brief
  *
  */
-class front_inserter {
+class FrontInserter {
    public:
     template <my::iterable Container, std::common_with<
                                           my::value_t<Container>>
@@ -369,7 +380,7 @@ class front_inserter {
  * @brief
  *
  */
-class inserter {
+class Inserter {
    public:
     template <my::iterable Container, std::common_with<
                                           my::value_t<Container>>
@@ -384,9 +395,9 @@ class inserter {
  * @brief
  *
  */
-class array_inserter {
+class ArrayInserter {
    public:
-    constexpr explicit array_inserter(size_t start = 0, size_t step = 1)
+    constexpr explicit ArrayInserter(size_t start = 0, size_t step = 1)
         : start_(start), step_(step) {}
 
     template <my::iterable Container, std::common_with<
@@ -414,13 +425,13 @@ class array_inserter {
 template <my::iterable Iterable>
 constexpr auto decide_inserter() noexcept {
     if constexpr (my::applicable_v<my::detail::call_push_back, Iterable>) {
-        return my::back_inserter{};
+        return my::BackInserter{};
     } else if (my::applicable_v<my::detail::call_insert, Iterable>) {
-        return my::inserter{};
+        return my::Inserter{};
     } else if (my::applicable_v<my::detail::call_square_brackets, Iterable>) {
-        return my::array_inserter{};
+        return my::ArrayInserter{};
     } else if (my::applicable_v<my::detail::call_push_front, Iterable>) {
-        return my::front_inserter{};
+        return my::FrontInserter{};
     } else {
         return;
     }

@@ -12,7 +12,7 @@
     if (not m_size) \
         throw std::runtime_error("trying to pop from empty CapacityStack");
 #else
-#define ERR_TOP()  // this may lead to unpredictable results
+#define ERR_TOP()  // this may lead to UB
 #define ERR_POP()
 #endif
 

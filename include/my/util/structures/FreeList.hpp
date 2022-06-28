@@ -39,7 +39,8 @@ class FreeList {
      *
      * @param list
      */
-    FreeList(std::initializer_list<value_type> list) : firstFree(INVALID) {
+    explicit FreeList(std::initializer_list<value_type> list)
+        : firstFree(INVALID) {
         reserve(list.size());
         for (auto&& el : list) {
             FreeElement fe;
@@ -49,7 +50,7 @@ class FreeList {
     }
 
     /**
-     * @brief Inserts element to the free list and retruns an index to it.
+     * @brief Inserts element to the free list and returns an index to it.
      *
      * @return Index to inserted element.
      */
