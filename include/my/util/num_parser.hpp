@@ -54,14 +54,6 @@ static inline double cygwin_strtod_l(const char *start, char **end) {
 }
 #else
 
-#ifdef __has_include
-// This is the easy case: we have __has_include and can check whether
-// xlocale is available. If so, we load it up.
-#if __has_include(<xlocale.h>)
-#include <xlocale.h>
-#endif  // __has_include
-#else   // We do not have __has_include
-
 #ifdef __GLIBC__
 #include <features.h>
 #if !((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ > 25)))
@@ -72,7 +64,6 @@ static inline double cygwin_strtod_l(const char *start, char **end) {
 #include <xlocale.h>
 #endif
 #endif
-#endif  // __has_include
 
 #endif  //  defined(FAST_DOUBLE_PARSER_SOLARIS) || defined(FAST_DOUBLE_PARSER_CYGWIN)
 
@@ -1305,6 +1296,30 @@ parse_number(const char *b, Integer &res) {
 
     //  unreachable
     return b;
+}
+
+template <class T>
+bool safe_parse_number(const char *p, T &out) {
+    // ~(T)~(T)0 compiles for integral types, but it doesn't compile for pointer
+    // or floating point types etc.
+    const bool is_signed = (T) ~(T)0 < (T)1;
+    const T nmax = (is_signed ? (T) ~((T)1 << (sizeof(T) * 8 - 1)) : (T) ~(T)0) / 10;
+    bool is_negative = false;
+    if (is_signed && *p == '-') {
+        is_negative = true;
+        ++p;
+    }
+    const char cmax = is_signed ? (is_negative ? 8 : 7) : 5;
+    T n = 0;
+    do {
+        if (*p + 0U - '0' > 9U) return false;  // Not a digit.
+        const char c = *p++ - '0';
+        const T nneg = -n;
+        if (nneg > nmax || (nneg == nmax && c > cmax)) return false;  // Overflow.
+        n = 10 * n - c;
+    } while (*p != '\0');
+    out = is_negative ? n : -n;
+    return true;  // Success.
 }
 
 }  // namespace fast_int_parser
