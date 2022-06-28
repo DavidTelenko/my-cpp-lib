@@ -14,7 +14,7 @@
 
 namespace my {
 
-namespace {
+namespace detail {
 
 /**
  * @brief variant visitor overload
@@ -32,14 +32,14 @@ overload(Ts...) -> overload<Ts...>;
  * @tparam T floating point
  */
 template <std::floating_point T>
-struct strip_zeroes {
-    constexpr explicit strip_zeroes(T value)
+struct stripZeroes {
+    constexpr explicit stripZeroes(T value)
         : _value(value) {
     }
 
     template <class Ch, class Tr>
     friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,
-                            const strip_zeroes& obj) {
+                            const stripZeroes& obj) {
         std::basic_stringstream<Ch, Tr> ss;
 
         ss << std::boolalpha
@@ -65,17 +65,12 @@ struct strip_zeroes {
  * @brief exception type thrown when parsing fails
  *
  */
-class ini_parse_exception : public std::runtime_error {
+class IniParseException : public std::runtime_error {
    public:
     template <class... Args>
-    explicit ini_parse_exception(const char* format, Args&&... args)
-        : _msg(my::format(format, std::forward<Args>(args)...).data()) {
+    explicit IniParseException(const char* format, Args&&... args)
+        : runtime_error(my::format(format, std::forward<Args>(args)...)) {
     }
-
-    const char* what() const noexcept override { return _msg; }
-
-   private:
-    const char* _msg;
 };
 
 /**
@@ -255,7 +250,7 @@ class ini_parse_exception : public std::runtime_error {
  *
  */
 template <template <class, class> class Map = std::map>
-class ini {
+class Ini {
    public:
     using bool_t = bool;
     using float_t = double;
@@ -282,33 +277,33 @@ class ini {
      * @brief Construct empty ini object
      *
      */
-    explicit ini() = default;
+    explicit Ini() = default;
 
     /**
      * @brief Construct a new ini object with provided input stream to parse
      *
      * @param is input stream to parse
      */
-    explicit ini(std::istream& is) { read(is); }
+    explicit Ini(std::istream& is) { read(is); }
 
     /**
      * @brief Construct a new ini object with provided string data to parse
      *
      * @param data string to parse
      */
-    explicit ini(const string_t& data) {
+    explicit Ini(const string_t& data) {
         std::stringstream ss(data);
         read(ss);
     }
 
     // convenience operators
 
-    friend auto& operator<<(std::ostream& os, const ini& file) {
+    friend auto& operator<<(std::ostream& os, const Ini& file) {
         file.write(os);
         return os;
     }
 
-    friend auto& operator>>(std::istream& is, ini& file) {
+    friend auto& operator>>(std::istream& is, Ini& file) {
         file.read(is);
         return is;
     }
@@ -356,7 +351,7 @@ class ini {
      * @param rhs other ini file to merge with
      * @return size_t amount of inserted and changed values
      */
-    size_t merge(const ini& rhs) {
+    size_t merge(const Ini& rhs) {
         size_t mutated = 0;
 
         for (auto&& section : rhs._sections) {
@@ -404,15 +399,15 @@ class ini {
      * @param os reference to stream where to print data
      */
     void write(std::ostream& os) const {
-        auto value_visitor = overload(
+        auto value_visitor = detail::overload(
             [&os](bool_t val) { os << val; },
             [&os](null_t val) { os << val; },
             [&os](int_t val) { os << val; },
-            [&os](float_t val) { os << strip_zeroes(val); },
+            [&os](float_t val) { os << detail::stripZeroes(val); },
             [&os](const string_t& val) { os << std::quoted(val); });
 
         for (auto&& section : _sections) {
-            my::printf(os, "[{}]\n", section.first);
+            os << '[' << section.first << "]\n";
 
             for (auto&& keyValue : section.second) {
                 os << keyValue.first << " = ";
@@ -506,30 +501,30 @@ class ini {
 
         // all possible states of state machine
         enum State {
-            maybe_empty_line,
-            consume_trailing_spaces,
-            key_value_delim,
-            value_begin,
-            begin,
+            MaybeEmptyLine,
+            ConsumeTrailingSpaces,
+            KeyValueDelimiter,
+            ValueStart,
+            Start,
 
-            section,
-            comment,
-            key,
-            string,
-            floating,
-            integer,
-            bin_integer,
-            oct_integer,
-            hex_integer,
-            boolean,
-            null_value,
+            Section,
+            Comment,
+            Key,
+            String,
+            FloatingPoint,
+            Integer,
+            BinInteger,
+            OctInteger,
+            HexInteger,
+            Boolean,
+            NullValue,
         };
 
         // all data are in one struct closure
         // therefore we can pass reference to it
         // and get all current variables at once
         struct {
-            State state = begin;
+            State state = Start;
             string_t section = "";
             string_t key = "";
             string_t value = "";
@@ -553,21 +548,21 @@ class ini {
             if (isSpace(ch)) {
                 finalize(current);
                 current.resetKeyValue();
-                current.state = consume_trailing_spaces;
+                current.state = ConsumeTrailingSpaces;
                 return true;
             }
 
             if (isComment(ch)) {
                 finalize(current);
                 current.resetKeyValue();
-                current.state = comment;
+                current.state = Comment;
                 return true;
             }
 
             if (isEndline(ch)) {
                 finalize(current);
                 current.resetKeyValue();
-                current.state = maybe_empty_line;
+                current.state = MaybeEmptyLine;
                 return true;
             }
 
@@ -592,42 +587,42 @@ class ini {
                 // If we are only starting there is three possible cases
                 // we either got empty line with spaces, comment or section
                 // in any other case we throw
-                case begin: {
+                case Start: {
                     if (isEndline(ch) or isSpace(ch)) {
                         break;
                     }
 
                     if (isComment(ch)) {
-                        current.state = comment;
+                        current.state = Comment;
                         break;
                     }
 
                     if (isSectionOpen(ch)) {
-                        current.state = section;
+                        current.state = Section;
                         break;
                     }
 
-                    throw ini_parse_exception("File must start from section:{}",
-                                              current.line);
+                    throw IniParseException("File must start from section:{}",
+                                            current.line);
                 }
 
                 // If open section token was read
                 // we reading all alpha-numeric chars until it's closed
                 // In case of empty section or non alpha-numeric char we throw
-                case section: {
+                case Section: {
                     if (isSectionClose(ch)) {
                         if (current.section.empty()) {
-                            throw ini_parse_exception(
+                            throw IniParseException(
                                 "Section name must not be empty:{}",
                                 current.line);
                         }
                         _sections[current.section];
-                        current.state = consume_trailing_spaces;
+                        current.state = ConsumeTrailingSpaces;
                         break;
                     }
 
                     if (not(isAlpha(ch) or isDigit(ch))) {
-                        throw ini_parse_exception(
+                        throw IniParseException(
                             "Section name must contain only "
                             "alpha numeric chars:{}",
                             current.line);
@@ -642,58 +637,58 @@ class ini {
                 // alpha-numeric char appears. In case we received non
                 // alpha-numeric char we throw same error as if we received it in
                 // the key state
-                case maybe_empty_line: {
+                case MaybeEmptyLine: {
                     if (isEndline(ch) or
                         isSpace(ch) or
                         isEof(ch)) break;
 
                     if (isSectionOpen(ch)) {
                         current.resetSection();
-                        current.state = section;
+                        current.state = Section;
                         break;
                     }
 
                     if (isComment(ch)) {
-                        current.state = comment;
+                        current.state = Comment;
                         break;
                     }
 
                     if (not(isAlpha(ch) or isDigit(ch) or isUnderscore(ch))) {
-                        throw ini_parse_exception(
+                        throw IniParseException(
                             "Key must contain only alpha "
                             "numeric chars:{}",
                             current.line);
                     }
 
                     current.key.push_back(ch);
-                    current.state = key;
+                    current.state = Key;
                     break;
                 }
 
                 // After each value or section we can receive
                 // trailing spaces, consume it and throw in case there is
                 // something that is not a whitespace, endline or comment
-                case consume_trailing_spaces: {
+                case ConsumeTrailingSpaces: {
                     if (isSpace(ch) or isEof(ch)) break;
                     if (isComment(ch)) {
-                        current.state = comment;
+                        current.state = Comment;
                         break;
                     }
                     if (isEndline(ch)) {
-                        current.state = maybe_empty_line;
+                        current.state = MaybeEmptyLine;
                         break;
                     }
-                    throw ini_parse_exception(
+                    throw IniParseException(
                         "Only trailing spaces, comment or "
                         "newline is required after value:{}",
                         current.line);
                 }
 
                 // Simply consume all chars until endline or eof
-                case comment: {
+                case Comment: {
                     if (isEof(ch)) break;
                     if (isEndline(ch)) {
-                        current.state = maybe_empty_line;
+                        current.state = MaybeEmptyLine;
                     }
                     break;
                 }
@@ -703,9 +698,9 @@ class ini {
                 // Whitespace char will move us to consuming state of spaces
                 // between last key char and equals sign
                 // Equals sign will move us directly to value state
-                case key: {
+                case Key: {
                     if (isComment(ch)) {
-                        throw ini_parse_exception(
+                        throw IniParseException(
                             "Comments is prohibited inside "
                             "of key declaration:{}",
                             current.line);
@@ -713,26 +708,26 @@ class ini {
 
                     if (isSpace(ch)) {
                         if (current.key.empty()) {
-                            throw ini_parse_exception(
+                            throw IniParseException(
                                 "Key must not be empty:{}",
                                 current.line);
                         }
-                        current.state = key_value_delim;
+                        current.state = KeyValueDelimiter;
                         break;
                     }
 
                     if (isEquals(ch)) {
                         if (current.key.empty()) {
-                            throw ini_parse_exception(
+                            throw IniParseException(
                                 "Key must not be empty:{}",
                                 current.line);
                         }
-                        current.state = value_begin;
+                        current.state = ValueStart;
                         break;
                     }
 
                     if (not(isAlpha(ch) or isDigit(ch) or isUnderscore(ch))) {
-                        throw ini_parse_exception(
+                        throw IniParseException(
                             "Key must contain only alpha "
                             "numeric chars:{}",
                             current.line);
@@ -744,15 +739,15 @@ class ini {
 
                 // Consume all spaces until equals sign is found
                 // throw if any other char appears
-                case key_value_delim: {
+                case KeyValueDelimiter: {
                     if (isSpace(ch)) break;
 
                     if (isEquals(ch)) {
-                        current.state = value_begin;
+                        current.state = ValueStart;
                         break;
                     }
 
-                    throw ini_parse_exception(
+                    throw IniParseException(
                         "Key must not contain spaces:{}",
                         current.line);
                 }
@@ -770,7 +765,7 @@ class ini {
                 // If it is first char of null, true or false token we go to
                 // respective state
                 // Else we throw
-                case value_begin: {
+                case ValueStart: {
                     if (isSpace(ch)) break;
 
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
@@ -778,53 +773,53 @@ class ini {
                         })) break;
 
                     if (isQuote(ch)) {
-                        current.state = string;
+                        current.state = String;
                         break;
                     }
 
                     if (isHexStart(ch, is.peek())) {
                         is.get();
-                        current.state = hex_integer;
+                        current.state = HexInteger;
                         break;
                     }
 
                     if (isBinStart(ch, is.peek())) {
                         is.get();
-                        current.state = bin_integer;
+                        current.state = BinInteger;
                         break;
                     }
 
                     if (isOctStart(ch, is.peek())) {
                         is.get();
-                        current.state = oct_integer;
+                        current.state = OctInteger;
                         break;
                     }
 
                     if (isDigit(ch) or isMinus(ch) or isPlus(ch)) {
                         current.value.push_back(ch);
-                        current.state = integer;
+                        current.state = Integer;
                         break;
                     }
 
                     if (isDot(ch)) {
                         current.value.push_back(ch);
-                        current.state = floating;
+                        current.state = FloatingPoint;
                         break;
                     }
 
                     if (isTrueStart(ch) or isFalseStart(ch)) {
                         current.value.push_back(ch);
-                        current.state = boolean;
+                        current.state = Boolean;
                         break;
                     }
 
                     if (isNullStart(ch)) {
                         current.value.push_back(ch);
-                        current.state = null_value;
+                        current.state = NullValue;
                         break;
                     }
 
-                    throw ini_parse_exception(
+                    throw IniParseException(
                         "Value must be either quoted string, number, "
                         "boolean, or null (empty line):{}",
                         current.line);
@@ -834,11 +829,11 @@ class ini {
                 // if there is quote and insert it in this case
                 // If we reached another quote without backslash we terminating
                 // and consuming trailing spaces (or comment)
-                case string: {
+                case String: {
                     if (isQuote(ch)) {
                         _sections[current.section][current.key] = current.value;
                         current.resetKeyValue();
-                        current.state = consume_trailing_spaces;
+                        current.state = ConsumeTrailingSpaces;
                         break;
                     }
 
@@ -856,13 +851,13 @@ class ini {
                 // standard operator that will handle all errors for us
                 // It would be really tough to prevent repetitive exponent or
                 // plus/minus signs using separate states
-                case floating: {
+                case FloatingPoint: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             std::istringstream ss(curr.value);
                             float_t result;
                             ss >> result;
                             if (not ss) {
-                                throw ini_parse_exception(
+                                throw IniParseException(
                                     "Value \"{}\" is invalid floating "
                                     "point value:{}",
                                     curr.value, curr.line);
@@ -876,7 +871,7 @@ class ini {
 
                     if (not(isDigit(ch) or isExponent(ch) or
                             isPlus(ch) or isMinus(ch))) {
-                        throw ini_parse_exception(
+                        throw IniParseException(
                             "Invalid symbol \"{}\" in floating point "
                             "number:{}",
                             ch, current.line);
@@ -889,13 +884,13 @@ class ini {
                 // Read all digits skip all separators if dot is found then
                 // it is float go to appropriate state
                 // If any inappropriate symbol found - throw
-                case integer: {
+                case Integer: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             std::istringstream ss(curr.value);
                             int_t result;
                             ss >> result;
                             if (not ss) {
-                                throw ini_parse_exception(
+                                throw IniParseException(
                                     "Value \"{}\" is invalid integral "
                                     "value:{}",
                                     curr.value, curr.line);
@@ -909,12 +904,12 @@ class ini {
 
                     if (isDot(ch)) {
                         current.value.push_back(ch);
-                        current.state = floating;
+                        current.state = FloatingPoint;
                         break;
                     }
 
                     if (not isDigit(ch)) {
-                        throw ini_parse_exception(
+                        throw IniParseException(
                             "Integer must only contain digits "
                             "in range [0 - 9]:{}",
                             current.line);
@@ -927,7 +922,7 @@ class ini {
                 // bin, hex, oct states are basically all the same
                 // skip separators, throw if not appropriate digit
                 // parse using standard io method
-                case bin_integer: {
+                case BinInteger: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             std::bitset<32> tmp(curr.value);
                             _sections[curr.section][curr.key] = tmp.to_ulong();
@@ -938,7 +933,7 @@ class ini {
                     }
 
                     if (not isBinDigit(ch)) {
-                        throw ini_parse_exception(
+                        throw IniParseException(
                             "Binary integer must only contain "
                             "0 and 1 digits:{}",
                             current.line);
@@ -948,13 +943,13 @@ class ini {
                     break;
                 }
 
-                case oct_integer: {
+                case OctInteger: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             std::istringstream ss(curr.value);
                             int_t result;
                             ss >> std::oct >> result;
                             if (not ss) {
-                                throw ini_parse_exception(
+                                throw IniParseException(
                                     "Value \"{}\" is invalid octal value:{}",
                                     curr.value, curr.line);
                             }
@@ -966,7 +961,7 @@ class ini {
                     }
 
                     if (not isOctDigit(ch)) {
-                        throw ini_parse_exception(
+                        throw IniParseException(
                             "Octal integer must only contain "
                             "digits in range [0 - 7]:{}",
                             current.line);
@@ -976,13 +971,13 @@ class ini {
                     break;
                 }
 
-                case hex_integer: {
+                case HexInteger: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             std::istringstream ss(curr.value);
                             int_t result;
                             ss >> std::hex >> result;
                             if (not ss) {
-                                throw ini_parse_exception(
+                                throw IniParseException(
                                     "Value \"{}\" is invalid hexadecimal value:{}",
                                     curr.value, curr.line);
                             }
@@ -994,7 +989,7 @@ class ini {
                     }
 
                     if (not isHexDigit(ch)) {
-                        throw ini_parse_exception(
+                        throw IniParseException(
                             "Hexadecimal integer must only contain digits "
                             "in range [0 - 9] and chars in range [A - F]:{}",
                             current.line);
@@ -1007,13 +1002,13 @@ class ini {
                 // boolean and null are keywords so we parse them in a similar
                 // fashion if end reached check if value read is appropriate
                 // keyword insert parsed value throw otherwise
-                case boolean: {
+                case Boolean: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             std::istringstream ss(curr.value);
                             bool_t result;
                             ss >> std::boolalpha >> result;
                             if (not ss) {
-                                throw ini_parse_exception(
+                                throw IniParseException(
                                     "Value \"{}\" is invalid boolean value:{}",
                                     curr.value, curr.line);
                             }
@@ -1024,10 +1019,10 @@ class ini {
                     break;
                 }
 
-                case null_value: {
+                case NullValue: {
                     if (regularTokenEndHandle(ch, current, [this](auto& curr) {
                             if (curr.value != "null") {
-                                throw ini_parse_exception(
+                                throw IniParseException(
                                     "Value \"{}\" is invalid null value:{}",
                                     curr.value, curr.line);
                             }
@@ -1066,7 +1061,7 @@ inline namespace literals {
 inline namespace ini_literals {
 
 auto operator"" _ini(const char* data, size_t) {
-    ini<std::map> result(data);
+    Ini<std::map> result(data);
     return result;
 }
 
