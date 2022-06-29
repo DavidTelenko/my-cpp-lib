@@ -76,37 +76,6 @@ struct DefaultGenerateConstruct {
 
 }  // namespace detail
 
-/**
- * @brief
- *
- * @tparam Container
- * @tparam Size
- * @tparam Generator
- * @tparam Construct
- * @tparam Size>
- * @param gen
- * @param size
- * @param construct
- * @return my::require_iterable<Container>
- */
-template <my::iterable Container, std::integral Size, class Generator,
-          class Construct = detail::DefaultGenerateConstruct<Container, Size>>
-Container generate(Generator gen, Size size,
-                   Construct construct = Construct{}) {
-    using std::begin;
-    using std::end;
-    using value_t = decltype(*begin(std::declval<Container>()));
-    static_assert(std::is_convertible_v<decltype(gen()), value_t>);
-
-    auto result = std::move(construct(size));
-
-    for (auto it = begin(result); size--; ++it) {
-        *it = std::invoke(gen);
-    }
-
-    return result;
-}
-
 // stl-like multiple iterator + container parallel algorithms
 
 /**
