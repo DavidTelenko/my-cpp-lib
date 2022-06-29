@@ -23,8 +23,6 @@ namespace detail {
  */
 template <class... Ts>
 struct overload : Ts... { using Ts::operator()...; };
-template <class... Ts>
-overload(Ts...) -> overload<Ts...>;
 
 /**
  * @brief Manipulator to print floats without zeroes at the end
@@ -59,7 +57,7 @@ struct stripZeroes {
     T _value;
 };
 
-}  // namespace
+}  // namespace detail
 
 /**
  * @brief exception type thrown when parsing fails
