@@ -33,10 +33,14 @@ struct PlotPoint {
     PlotPoint(float x, float y) : x(x), y(y) {}
     PlotPoint() : x(0), y(0) {}
     struct xComparator {
-        bool operator()(const PlotPoint& a, const PlotPoint& b) { return a.x < b.x; }
+        bool operator()(const PlotPoint& a, const PlotPoint& b) {
+            return a.x < b.x;
+        }
     };
     struct yComparator {
-        bool operator()(const PlotPoint& a, const PlotPoint& b) { return a.y < b.y; }
+        bool operator()(const PlotPoint& a, const PlotPoint& b) {
+            return a.y < b.y;
+        }
     };
     friend auto& operator<<(std::ostream& os, const PlotPoint& p) {
         os << "(x:" << p.x << "; y:" << p.y << ")";
@@ -44,7 +48,7 @@ struct PlotPoint {
     }
 };
 
-namespace plot_detail {
+namespace detail {
 
 struct MinMaxXY {
     PlotPoint min, max;
@@ -104,7 +108,7 @@ auto plotVals(Iter b, Iter e, std::vector<std::string>& graph,
     }
 }
 
-};  // namespace plot_detail
+};  // namespace detail
 
 /**
  * @brief Prints plot into os stream
@@ -127,7 +131,7 @@ auto plot(std::ostream& os, Iter b, Iter e, const PlotDimension& d = {}, char ma
     assert(d.width and d.height);
     // SET_UTF8_CONSOLE_CP();
 
-    const auto o = plot_detail::getMinMaxXY(b, e);
+    const auto o = detail::getMinMaxXY(b, e);
     const size_t curvy = static_cast<size_t>(Style::Curvy);
 
     assert(not my::same(o.min.x, o.max.x) and
@@ -150,9 +154,9 @@ auto plot(std::ostream& os, Iter b, Iter e, const PlotDimension& d = {}, char ma
     // TODO use braille font to print graph
     // TODO figure out how to print braille font
     if constexpr (std::is_same_v<typename std::iterator_traits<Iter>::value_type, PlotPoint>)
-        plot_detail::plotPoints(b, e, graph, o, d, marker);
+        detail::plotPoints(b, e, graph, o, d, marker);
     else
-        plot_detail::plotVals(b, e, graph, o, d, marker);
+        detail::plotVals(b, e, graph, o, d, marker);
 
     // printing whiteboard
     for (const auto& row : graph) os << row << '\n';

@@ -180,11 +180,11 @@ void defineColor(const std::string& key, const my::Color color) {
 /**
  * printcol():
  *
- * Parsing tree:
+ * Parsing grammar:
  *     color      ::= user_color | inner_color | hex_value
  *     background ::= color
  *     foreground ::= color
- *     content    ::= text | "{}"
+ *     content    ::= text | text"{}"
  *     space      ::= " "+
  *     expression ::= "[#" foreground ["," [space] "#" background] ":" content "]"
  *

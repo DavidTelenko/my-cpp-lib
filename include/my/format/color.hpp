@@ -175,7 +175,8 @@ struct setColor {
  * @param format format string
  * @param args any joinable or printable value
  */
-template <class Ch, class Tr, my::joinable<Ch, Tr>... Args>
+template <class Ch, class Tr,
+          my::printable<std::basic_ostream<Ch, Tr>>... Args>
 inline void printf(std::basic_ostream<Ch, Tr>& os,
                    Color foreground, Color background,
                    const Ch* format, Args&&... args) {
@@ -192,7 +193,7 @@ inline void printf(std::basic_ostream<Ch, Tr>& os,
  * @param format format string
  * @param args any joinable or printable value
  */
-template <my::joinable<char, std::char_traits<char>>... Args>
+template <my::printable<std::ostream>... Args>
 inline void printf(std::ostream& os, Color foreground,
                    const char* format, Args&&... args) {
     setfg(os, foreground);
@@ -208,7 +209,7 @@ inline void printf(std::ostream& os, Color foreground,
  * @param format format string
  * @param args any joinable or printable value
  */
-template <my::joinable<char, std::char_traits<char>>... Args>
+template <my::printable<std::ostream>... Args>
 inline void printf(Color foreground, Color background,
                    const char* format, Args&&... args) {
     printf(std::cout, foreground, background, format, args...);
@@ -221,7 +222,7 @@ inline void printf(Color foreground, Color background,
  * @param format format string
  * @param args any joinable or printable value
  */
-template <my::joinable<char, std::char_traits<char>>... Args>
+template <my::printable<std::ostream>... Args>
 inline void printf(Color foreground,
                    const char* format, Args&&... args) {
     printf(std::cout, foreground, format, args...);

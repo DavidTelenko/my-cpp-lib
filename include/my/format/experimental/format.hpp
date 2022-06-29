@@ -2,7 +2,7 @@
 #ifndef MY_FORMAT_HPP
 #define MY_FORMAT_HPP
 
-#include <my/util/traits.hpp>
+#include <my/format/join.hpp>
 //
 #include <array>
 #include <cstring>
@@ -24,8 +24,8 @@ printf(std::basic_ostream<Ch, Tr>& os, const Ch* format) {
 }
 
 template <class Ch, class Tr,
-          my::printable<std::basic_ostream<Ch, Tr>> Arg,
-          my::printable<std::basic_ostream<Ch, Tr>>... Args>
+          my::joinable<Ch, Tr> Arg,
+          my::joinable<Ch, Tr>... Args>
 constexpr void
 printf(std::basic_ostream<Ch, Tr>& os,
        const Ch* format, Arg&& arg, Args&&... args) {
@@ -35,7 +35,7 @@ printf(std::basic_ostream<Ch, Tr>& os,
                 os << '{';
                 continue;
             }
-            os << arg;
+            os << join<Ch, Tr>(arg);
             return detail::printf(os, (format + 2),
                                   std::forward<Args>(args)...);
         }
@@ -53,7 +53,7 @@ printf(std::basic_ostream<Ch, Tr>& os,
  * @param format format c_str where '{}' is a replace anchor
  * @param args any types with std::ostream& operator<< implemented
  */
-template <my::printable<std::ostream>... Args>
+template <my::joinable<char, std::char_traits<char>>... Args>
 constexpr void
 printf(const char* format, Args&&... args) {
     detail::printf(std::cout, format, std::forward<Args>(args)...);
@@ -67,7 +67,7 @@ printf(const char* format, Args&&... args) {
  * @param format format wc_str where '{}' is a replace anchor
  * @param args any types with std::wostream& operator<< implemented
  */
-template <my::printable<std::wostream>... Args>
+template <my::joinable<wchar_t, std::char_traits<wchar_t>>... Args>
 constexpr void
 wprintf(const wchar_t* format, Args&&... args) {
     detail::printf(std::wcout, format, std::forward<Args>(args)...);
@@ -82,8 +82,7 @@ wprintf(const wchar_t* format, Args&&... args) {
  * @param format format c_str where '{}' is a replace anchor
  * @param args any types with std::ostream& operator<< implemented
  */
-template <class Ch, class Tr,
-          my::printable<std::basic_ostream<Ch, Tr>>... Args>
+template <class Ch, class Tr, my::joinable<Ch, Tr>... Args>
 constexpr void
 printf(std::basic_ostream<Ch, Tr>& os,
        const Ch* format, Args&&... args) {
@@ -99,8 +98,7 @@ printf(std::basic_ostream<Ch, Tr>& os,
  *
  * @return std::string new object with printed ouput
  */
-template <class Ch,
-          my::printable<std::basic_ostream<Ch, std::char_traits<Ch>>>... Args>
+template <class Ch, my::joinable<Ch, std::char_traits<Ch>>... Args>
 inline std::basic_string<Ch, std::char_traits<Ch>>
 format(const Ch* format, Args&&... args) {
     std::basic_stringstream<Ch, std::char_traits<Ch>> ss;
