@@ -426,19 +426,19 @@ constexpr bool same(Number a, Number b,
     // assume small positive epsilon
     assert(epsilon >= zero and epsilon <= one);
 
-    const Number diff = std::abs(a - b);
+    const Number d = std::abs(a - b);
     const Number maxAB = std::max(std::abs(a), std::abs(b));
 
     // if the multiply won't underflow then use a multiply
     if (maxAB >= one) {
-        return diff <= (epsilon * maxAB);
+        return d <= (epsilon * maxAB);
     }
     // multiply could underflow so use a divide if nonzero denominator
     if (maxAB > zero) {
         // correctly returns false on divide overflow
         // (inf <= epsilon is false), since overflow means the
         // relative difference is large and they are therefore not close
-        return diff / maxAB <= epsilon;
+        return d / maxAB <= epsilon;
     }
     // both a and b are zero
     return true;
@@ -465,9 +465,9 @@ constexpr bool same(Number a, Number b,
      * It is therefore desired to combine these two tests
      * together in a single test...
      */
-    constexpr Number diff = std::abs(a - b);
+    constexpr Number d = std::abs(a - b);
     constexpr Number maxAB = std::max(std::abs(a), std::abs(b));
-    return diff <= std::max(absTol, relTol * maxAB);
+    return d <= std::max(absTol, relTol * maxAB);
 }
 
 /**
