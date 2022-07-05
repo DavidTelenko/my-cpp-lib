@@ -15,30 +15,33 @@ concept pair_like = requires(T val) {
     {val.second};
 };
 
-template <class T, class Ch, class Tr,
+template <class T,
+          class Ch, class Tr,
           class R = std::remove_reference_t<T>>
-concept default_presentable =
+concept default_representable =
     std::ranges::range<R> or
     my::is_tuple_v<R> or
     pair_like<R> or
     std::input_or_output_iterator<R> or
     my::printable<R, std::basic_ostream<Ch, Tr>>;
 
-template <class Ch, class Tr, default_presentable<Ch, Tr> T>
-constexpr void present(std::basic_ostream<Ch, Tr>& os, const T& value);
+template <class Ch, class Tr, default_representable<Ch, Tr> T>
+constexpr void represent(std::basic_ostream<Ch, Tr>& os, const T& value);
 
-struct DefaultPresenter {
-    template <class Ch, class Tr, default_presentable<Ch, Tr> T>
+struct DefaultRepresenter {
+    template <class Ch, class Tr, default_representable<Ch, Tr> T>
     constexpr void operator()(std::basic_ostream<Ch, Tr>& os,
-                              const T& value) const { present(os, value); }
+                              const T& value) const {
+        represent<Ch, Tr>(os, value);
+    }
 };
 
-template <std::input_iterator It, class Presenter>
+template <std::input_iterator It, class Representer>
 class JoinedRangeView {
    public:
     constexpr explicit JoinedRangeView(It first, It last,
                                        std::string_view delim,
-                                       Presenter presenter)
+                                       Representer presenter)
         : _first(std::move(first)),
           _last(std::move(last)),
           _delim(std::move(delim)),
@@ -69,15 +72,15 @@ class JoinedRangeView {
    private:
     It _first, _last;
     std::string_view _delim;
-    my::make_member_function_t<Presenter> _present;
+    my::make_member_function_t<Representer> _present;
 };
 
-template <class Presenter, class... Args>
+template <class Representer, class... Args>
 class JoinedTupleView {
    public:
     constexpr explicit JoinedTupleView(const std::tuple<Args...>& tuple,
                                        std::string_view delim,
-                                       Presenter presenter)
+                                       Representer presenter)
         : _tuple(tuple),
           _delim(std::move(delim)),
           _present(std::move(presenter)) {
@@ -106,13 +109,13 @@ class JoinedTupleView {
    private:
     const std::tuple<Args...>& _tuple;
     std::string_view _delim;
-    my::make_member_function_t<Presenter> _present;
+    my::make_member_function_t<Representer> _present;
 };
 
-template <class Presenter = DefaultPresenter>
-struct PairPresenter {
-    constexpr explicit PairPresenter(std::string_view delim = ", ",
-                                     Presenter presenter = {})
+template <class Representer = DefaultRepresenter>
+struct PairRepresenter {
+    constexpr explicit PairRepresenter(std::string_view delim = ", ",
+                                       Representer presenter = {})
         : _delim(std::move(delim)), _present(presenter) {
     }
 
@@ -126,16 +129,16 @@ struct PairPresenter {
 
    private:
     const std::string_view _delim;
-    Presenter _present;
+    Representer _present;
 };
 
-constexpr PairPresenter<> pairPresent;
+constexpr PairRepresenter<> pairPresent;
 
-template <class Presenter = DefaultPresenter>
-struct RangePresenter {
+template <class Representer = DefaultRepresenter>
+struct RangeRepresenter {
    public:
-    constexpr explicit RangePresenter(std::string_view delim = ", ",
-                                      Presenter presenter = {})
+    constexpr explicit RangeRepresenter(std::string_view delim = ", ",
+                                        Representer presenter = {})
         : _delim(std::move(delim)), _present(presenter) {
     }
 
@@ -158,15 +161,15 @@ struct RangePresenter {
 
    private:
     const std::string_view _delim;
-    Presenter _present;
+    Representer _present;
 };
 
-constexpr RangePresenter<> rangePresent;
-template <class Presenter = DefaultPresenter>
-struct TuplePresenter {
+constexpr RangeRepresenter<> rangePresent;
+template <class Representer = DefaultRepresenter>
+struct TupleRepresenter {
    public:
-    constexpr explicit TuplePresenter(std::string_view delim = ", ",
-                                      Presenter presenter = {})
+    constexpr explicit TupleRepresenter(std::string_view delim = ", ",
+                                        Representer presenter = {})
         : _delim(std::move(delim)), _present(presenter) {
     }
 
@@ -184,33 +187,33 @@ struct TuplePresenter {
 
    private:
     const std::string_view _delim;
-    Presenter _present;
+    Representer _present;
 };
 
-constexpr TuplePresenter<> tuplePresent;
+constexpr TupleRepresenter<> tuplePresent;
 
 struct JoinFunction {
-    template <std::ranges::range Range, class Presenter = DefaultPresenter>
+    template <std::ranges::range Range, class Representer = DefaultRepresenter>
     constexpr auto operator()(const Range& range,
                               std::string_view delim = ", ",
-                              Presenter presenter = {}) const {
+                              Representer presenter = {}) const {
         return JoinedRangeView(std::ranges::begin(range),
                                std::ranges::end(range),
                                delim, presenter);
     }
 
-    template <class Presenter, class... Args>
+    template <class Representer, class... Args>
     constexpr auto operator()(const std::tuple<Args...>& tuple,
                               std::string_view delim = ", ",
-                              Presenter presenter = DefaultPresenter{}) const {
+                              Representer presenter = DefaultRepresenter{}) const {
         return JoinedTupleView(tuple, delim, presenter);
     }
 };
 
 constexpr JoinFunction join;
 
-template <class Ch, class Tr, default_presentable<Ch, Tr> T>
-constexpr void present(std::basic_ostream<Ch, Tr>& os, const T& value) {
+template <class Ch, class Tr, default_representable<Ch, Tr> T>
+constexpr void represent(std::basic_ostream<Ch, Tr>& os, const T& value) {
     if constexpr (my::printable<T>) {
         os << value;
     } else if constexpr (std::ranges::range<T>) {
@@ -220,9 +223,21 @@ constexpr void present(std::basic_ostream<Ch, Tr>& os, const T& value) {
     } else if constexpr (my::is_tuple_v<T>) {
         tuplePresent(os, value);
     } else if constexpr (std::input_or_output_iterator<T>) {
-        present(os, *value);
+        represent(os, *value);
     }
     return;
+}
+
+template <class Ch, class Tr, default_representable<Ch, Tr> T>
+std::basic_string<Ch, Tr> represent(const T& value) {
+    std::basic_stringstream<Ch, Tr> ss;
+    represent(ss, value);
+    return ss.str();
+}
+
+template <default_representable<char, std::char_traits<char>> T>
+std::string represent(const T& value) {
+    return represent<char, std::char_traits<char>>(value);
 }
 
 }  // namespace my
