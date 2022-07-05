@@ -34,7 +34,8 @@ struct Table {
      * @param args rest of arguments
      * @return auto& chain reference to table object
      */
-    template <my::joinable<Ch, Tr> Arg, my::joinable<Ch, Tr>... Args>
+    template <my::printable<ostream_t> Arg,
+              my::printable<ostream_t>... Args>
     inline auto& pushRow(Arg&& arg, Args&&... args) {
         _body.push_back(receiveRow_(std::forward<Arg>(arg),
                                     std::forward<Args>(args)...));
@@ -51,7 +52,8 @@ struct Table {
      * @param args rest of arguments
      * @return auto& chain reference to table object
      */
-    template <my::joinable<Ch, Tr> Arg, my::joinable<Ch, Tr>... Args>
+    template <my::printable<ostream_t> Arg,
+              my::printable<ostream_t>... Args>
     inline auto& header(Arg&& arg, Args&&... args) {
         _header = receiveRow_(std::forward<Arg>(arg),
                               std::forward<Args>(args)...);
@@ -68,7 +70,8 @@ struct Table {
      * @param args rest of arguments
      * @return auto& chain reference to table object
      */
-    template <my::joinable<Ch, Tr> Arg, my::joinable<Ch, Tr>... Args>
+    template <my::printable<ostream_t> Arg,
+              my::printable<ostream_t>... Args>
     inline auto& footer(Arg&& arg, Args&&... args) {
         _footer = receiveRow_(std::forward<Arg>(arg),
                               std::forward<Args>(args)...);
@@ -149,13 +152,11 @@ struct Table {
      * @param os ostream reference
      * @return ostream_t& reference to os
      */
-    inline ostream_t& print(ostream_t& os) const {
-        if (_header.empty() and _body.empty() and _footer.empty())
-            return os;
+    inline void print(ostream_t& os) const {
+        if (_header.empty() and _body.empty() and _footer.empty()) return;
         printHeader(os);
         printBody(os);
         printFooter(os);
-        return os;
     }
 
     /**
@@ -164,13 +165,11 @@ struct Table {
      * @param os ostream reference
      * @return ostream_t& reference to os
      */
-    inline ostream_t& printHTML(ostream_t& os) const {
-        if (_header.empty() and _body.empty() and _footer.empty())
-            return os;
+    inline void printHTML(ostream_t& os) const {
+        if (_header.empty() and _body.empty() and _footer.empty()) return;
         printHeaderHTML(os);
         printBodyHTML(os);
         printFooterHTML(os);
-        return os;
     }
 
     /**
@@ -178,24 +177,25 @@ struct Table {
      *
      * @return ostream_t& reference to std::cout
      */
-    inline ostream_t& print() const
+    inline void print() const
         requires std::same_as<Ch, char> and
         std::same_as<Tr, std::char_traits<char>> {
-        return print(std::cout);
+        print(std::cout);
     }
     /**
      * @brief Prints table into std::wcout. You can also use operator<<
      *
      * @return ostream_t& reference to std::wcout
      */
-    inline ostream_t& print() const
+    inline void print() const
         requires std::same_as<Ch, wchar_t> and
         std::same_as<Tr, std::char_traits<wchar_t>> {
-        return print(std::wcout);
+        print(std::wcout);
     }
 
     friend ostream_t& operator<<(ostream_t& os, const Table& obj) {
-        return obj.print(os);
+        obj.print(os);
+        return os;
     }
 
    private:
@@ -302,14 +302,14 @@ struct Table {
             const auto element_size = row_iter->size();
             const auto size = *size_iter;
 
-            os << dash << my::space << *row_iter << my::space;
+            os << dash << ' ' << *row_iter << ' ';
 
             if (element_size < size) {
-                print_n(os, size - element_size, os.widen(' '));
+                print_n(os, size - element_size, ' ');
             }
         }
 
-        os << dash << my::newline;
+        os << dash << '\n';
     }
 
     auto printSeparatorHelper(ostream_t& os,
@@ -332,7 +332,7 @@ struct Table {
             print_n(os, size + _pad, dash);
         }
 
-        os << right_corner << my::newline;
+        os << right_corner << '\n';
     }
 
     template <std::input_iterator It>
@@ -349,7 +349,7 @@ struct Table {
                   size_end = _sizes.end();
              begin != end and size_iter != size_end;
              ++begin, ++size_iter) {
-            const auto value = my::toString<Ch, Tr>(my::join<Ch>(begin));
+            const auto value = my::represent<Ch, Tr>(begin);
             const size_t value_size = value.size();
 
             if (value_size > *size_iter) {
@@ -362,12 +362,12 @@ struct Table {
         return row;
     }
 
-    template <class It, my::joinable<Ch, Tr> Arg,
-              my::joinable<Ch, Tr>... Args>
+    template <class It,
+              my::printable<ostream_t> Arg,
+              my::printable<ostream_t>... Args>
     auto readVariadicRowImpl_(std::vector<string_t>& row, It size_iter,
                               Arg&& arg, Args&&... args) {
-        const auto value = my::toString<Ch, Tr>(
-            my::join<Ch, Tr>(std::forward<Arg>(arg)));
+        const auto value = my::represent<Ch, Tr>(arg);
         const size_t value_size = value.size();
 
         if (value_size > *size_iter) {
@@ -384,7 +384,7 @@ struct Table {
         }
     }
 
-    template <my::joinable<Ch, Tr>... Args>
+    template <my::printable<ostream_t>... Args>
     auto readVariadicRow_(Args&&... args) {
         constexpr size_t size = sizeof...(args);
 
@@ -401,7 +401,7 @@ struct Table {
         return row;
     }
 
-    template <my::joinable<Ch, Tr> Arg, my::joinable<Ch, Tr>... Args>
+    template <my::printable<ostream_t> Arg, my::printable<ostream_t>... Args>
     inline auto receiveRow_(Arg&& arg, Args&&... args) {
         if constexpr (sizeof...(args) == 0 and my::is_iterable_v<Arg>) {
             using std::begin;
@@ -439,6 +439,7 @@ auto tableIterable(const T& iterable) {
 
     Table t;
     t.reserve(size(iterable));
+
     for (auto&& el : iterable) {
         t.pushRow(el);
     }
@@ -452,6 +453,7 @@ auto tableMap(const T& map) {
 
     Table t;
     t.reserve(size(map));
+
     for (auto&& el : map) {
         t.pushRow(el.first, el.second);
     }
@@ -465,6 +467,7 @@ auto tableObjects(const T& objects, Projections... proj) {
 
     Table t;
     t.reserve(size(objects));
+
     for (auto&& el : objects) {
         t.pushRow(std::invoke(proj, el)...);
     }
@@ -474,10 +477,10 @@ auto tableObjects(const T& objects, Projections... proj) {
 
 template <my::iterable T>
 constexpr auto table(const T& val) {
-    if constexpr (not my::is_associative_container_v<T>) {
-        return tableIterable(val);
-    } else {
+    if constexpr (my::is_associative_container_v<T>) {
         return tableMap(val);
+    } else {
+        return tableIterable(val);
     }
 }
 
