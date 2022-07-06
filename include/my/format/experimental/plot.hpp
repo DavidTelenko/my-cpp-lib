@@ -1,6 +1,4 @@
 #pragma once
-#ifndef MY_PLOT_HPP
-#define MY_PLOT_HPP
 
 #include <my/format/symbols.hpp>
 #include <my/util/math.hpp>
@@ -20,32 +18,25 @@
 
 namespace my {
 
+inline namespace fmt {
+
+template <class Number = float>
 struct NumericRange {
-    float min, max, step;
-};
+    Number min, max, step;
+}
 
 struct PlotDimension {
     size_t width = 50, height = 20;
 };
 
 struct PlotPoint {
-    float x, y;
     PlotPoint(float x, float y) : x(x), y(y) {}
     PlotPoint() : x(0), y(0) {}
-    struct xComparator {
-        bool operator()(const PlotPoint& a, const PlotPoint& b) {
-            return a.x < b.x;
-        }
-    };
-    struct yComparator {
-        bool operator()(const PlotPoint& a, const PlotPoint& b) {
-            return a.y < b.y;
-        }
-    };
     friend auto& operator<<(std::ostream& os, const PlotPoint& p) {
         os << "(x:" << p.x << "; y:" << p.y << ")";
         return os;
     }
+    float x, y;
 };
 
 namespace detail {
@@ -59,27 +50,39 @@ template <class Iter>
 auto getMinMaxXY(Iter b, Iter e) {
     MinMaxXY result;
 
-    if constexpr (std::is_same_v<typename std::iterator_traits<Iter>::value_type, PlotPoint>) {
-        const auto minMaxX = std::minmax_element(b, e, PlotPoint::xComparator{});
-        const auto minMaxY = std::minmax_element(b, e, PlotPoint::yComparator{});
-        result.maxLen = 3 + strLength(std::max_element(b, e, [](auto a, auto b) {
-                                          return strLength(a.y) < strLength(b.y);
-                                      })->y);
+    if constexpr (std::is_same_v<
+                      typename std::iterator_traits<Iter>::value_type,
+                      PlotPoint>) {
+        PlotPoint min, max;
+        size_t maxLen = 0;
 
-        result.min.x = minMaxX.first->x;
-        result.max.x = minMaxX.second->x;
-        result.min.y = minMaxY.first->y;
-        result.max.y = minMaxY.second->y;
+        for (; b != e; ++b) {
+            if (b->x < min.x) min.x = b->x;
+            if (b->x > max.x) max.x = b->x;
+            if (b->y < min.y) min.y = b->y;
+            if (b->y > max.y) max.y = b->y;
+            const auto len = strLength(b->y);
+            if (maxLen < len) maxLen = len;
+        }
+
+        result = {min, max, maxLen};
     } else {
-        const auto minMaxY = std::minmax_element(b, e, std::less{});
-        result.maxLen = 3 + strLength(*std::max_element(b, e, [](auto a, auto b) {
-                            return strLength(a) < strLength(b);
-                        }));
+        float min = 0, max = 0;
+        size_t maxLen = 0;
+
+        for (; b != e; ++b) {
+            if (*b < min) min = *b;
+            if (*b > max) max = *b;
+            const auto len = strLength(*b);
+            if (maxLen < len) maxLen = len;
+        }
+
+        result.maxLen = maxLen;
 
         result.min.x = 0;
         result.max.x = std::distance(b, e);
-        result.min.y = *minMaxY.first;
-        result.max.y = *minMaxY.second;
+        result.min.y = min;
+        result.max.y = max;
     }
     return result;
 }
@@ -286,5 +289,6 @@ auto plot(Generator f, const NumericRange& range, const PlotDimension& d = {},
     plot(std::cout, f, range, d, marker);
 }
 
+}  // namespace fmt
+
 }  // namespace my
-#endif  // MY_PLOT_HPP
