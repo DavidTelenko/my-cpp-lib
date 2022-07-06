@@ -10,8 +10,6 @@
 
 namespace my {
 
-inline namespace fmt {
-
 // concepts
 
 template <class T>
@@ -168,7 +166,5 @@ constexpr void _represent(std::basic_ostream<Ch, Tr>& os, const T& value) {
 }  // namespace detail
 
 constexpr DefaultRepresenter represent;
-
-}  // namespace fmt
 
 };  // namespace my

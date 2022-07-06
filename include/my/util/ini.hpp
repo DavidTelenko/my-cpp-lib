@@ -1,6 +1,4 @@
 #pragma once
-#ifndef MY_INI_HPP
-#define MY_INI_HPP
 
 #include <my/format/format.hpp>
 //
@@ -66,8 +64,8 @@ struct stripZeroes {
 class IniParseException : public std::runtime_error {
    public:
     template <class... Args>
-    explicit IniParseException(const char* format, Args&&... args)
-        : runtime_error(my::format(format, std::forward<Args>(args)...)) {
+    explicit IniParseException(const char* fmt, Args&&... args)
+        : runtime_error(my::format(fmt, std::forward<Args>(args)...)) {
     }
 };
 
@@ -1068,5 +1066,3 @@ auto operator"" _ini(const char* data, size_t) {
 }  // namespace literals
 
 }  // namespace  my
-
-#endif  // MY_INI_HPP

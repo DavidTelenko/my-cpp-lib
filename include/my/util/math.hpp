@@ -1,17 +1,13 @@
 #pragma once
-#ifndef MY_MATH_HPP
-#define MY_MATH_HPP
 
-// clib
-#include <cassert>   // assert
-#include <cmath>     // all inside
-#include <concepts>  // std::floating_point std::integral
-#include <cstring>   // std::memcpy
-// cpplib
-#include <chrono>  // for my::random
-#include <random>  // for my::random
-// mylib
 #include <my/util/traits.hpp>  // my::arithmetic
+//
+#include <cassert>   // assert
+#include <chrono>    // std::chrono::high_resolution_clock
+#include <cmath>     // all
+#include <concepts>  // std::floating_point, std::integral
+#include <cstring>   // std::memcpy
+#include <random>    // std::default_random_engine
 
 namespace my {
 
@@ -695,4 +691,3 @@ template <std::integral Number>
 constexpr bool checkBit(Number number, Number bit) { return (number >> bit) & 1U; }
 
 }  // namespace my
-#endif  // MY_MATH_HPP

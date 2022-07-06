@@ -4,8 +4,6 @@
 
 namespace my {
 
-inline namespace fmt {
-
 template <std::input_iterator It, class Representer>
 class JoinedRangeView {
    public:
@@ -106,7 +104,5 @@ struct JoinFunction {
 };
 
 constexpr JoinFunction join;
-
-}  // namespace fmt
 
 }  // namespace my

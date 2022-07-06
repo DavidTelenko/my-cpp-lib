@@ -1,10 +1,10 @@
 #pragma once
-#ifndef MY_ALGORITHM_HPP
-#define MY_ALGORITHM_HPP
 
-#include <cassert>
 #include <my/util/functional.hpp>
 #include <my/util/traits.hpp>
+//
+#include <cassert>
+#include <ranges>
 
 namespace my {
 
@@ -22,7 +22,8 @@ namespace my {
 template <std::input_iterator It,
           class BiPredicate =
               std::equal_to<typename std::iterator_traits<It>::value_type>>
-constexpr It majority(It first, It last, BiPredicate pred = BiPredicate{}) {
+constexpr It
+majority(It first, It last, BiPredicate pred = BiPredicate{}) {
     if (first == last) return first;
 
     auto result = first;
@@ -60,21 +61,14 @@ constexpr It majority(It first, It last, BiPredicate pred = BiPredicate{}) {
  * @param pred
  * @return constexpr auto
  */
-template <my::iterable Container,
+template <std::ranges::range Container,
           class BiPredicate = std::equal_to<my::value_t<Container>>>
 constexpr auto
 majority(const Container &container, BiPredicate pred = BiPredicate{}) {
-    return my::majority(begin(container), end(container), pred);
+    return my::majority(std::ranges::begin(container),
+                        std::ranges::end(container),
+                        pred);
 }
-
-namespace detail {
-
-template <class T, class Size>
-struct DefaultGenerateConstruct {
-    T operator()(Size size) { return T(size); }
-};
-
-}  // namespace detail
 
 // stl-like multiple iterator + container parallel algorithms
 
@@ -112,16 +106,15 @@ forEach(InIt first, InIt last, NaryFunction f,
  * @param rest
  * @return my::require_iterable<Container, NaryFunction>
  */
-template <class NaryFunction, my::iterable Container,
-          my::iterable... Containers>
+template <class NaryFunction, std::ranges::range Container,
+          std::ranges::range... Containers>
 constexpr NaryFunction
 forEach(Container &container, NaryFunction f,
         Containers &...rest) {
-    using std::begin;
-    using std::end;
-    return my::forEach(begin(container), end(container),
+    return my::forEach(std::ranges::begin(container),
+                       std::ranges::end(container),
                        std::move(f),
-                       begin(rest)...);
+                       std::ranges::begin(rest)...);
 }
 
 /**
@@ -135,74 +128,40 @@ forEach(Container &container, NaryFunction f,
  * @param rest
  * @return my::require_iterable<Container, NaryFunction>
  */
-template <class NaryFunction, my::iterable Container,
-          my::iterable... Containers>
+template <class NaryFunction, std::ranges::range Container,
+          std::ranges::range... Containers>
 constexpr NaryFunction
 forEach(NaryFunction f, const Container &container,
         const Containers &...rest) {
-    using std::begin;
-    using std::end;
-    return my::forEach(cbegin(container), cend(container),
+    return my::forEach(std::ranges::cbegin(container),
+                       std::ranges::cend(container),
                        std::move(f),
-                       cbegin(rest)...);
+                       std::ranges::cbegin(rest)...);
 }
 
 template <std::input_iterator InIt, std::weakly_incrementable Out,
           class NaryOperator, std::input_iterator... Iterators>
-constexpr Out transform(InIt first, InIt last, Out result,
-                        NaryOperator f,
-                        Iterators... rest) {
+constexpr Out
+transform(InIt first, InIt last, Out result,
+          NaryOperator f,
+          Iterators... rest) {
     for (; first != last; ++first, ++result, (++rest, ...)) {
         *result = std::invoke(f, *first, *(rest)...);
     }
     return result;
 }
 
-template <my::iterable Container, std::weakly_incrementable Out,
-          class NaryOperator, my::iterable... Containers>
-constexpr Out transform(const Container &container, Out result,
-                        NaryOperator f,
-                        const Containers &...rest) {
-    using std::begin;
-    using std::end;
-    return my::transform(begin(container), end(container), std::move(result),
-                         std::move(f), begin(rest)...);
-}
-
-namespace detail {
-
-template <class Result, std::input_iterator InIt,
-          class UnaryOperator, class Inserter,
-          std::input_iterator... Iterators>
-constexpr auto transformImpl(InIt first, InIt last, Result &result,
-                              UnaryOperator f, Inserter insert,
-                              Iterators... rest) {
-    for (; first != last; ++first, (++rest, ...)) {
-        std::invoke(insert, result, std::invoke(f, *first, *(rest)...));
-    }
-}
-
-};  // namespace detail
-
-template <class Result, my::iterable Container,
-          class UnaryOperator, class Inserter,
-          my::iterable... Containers>
-requires std::is_default_constructible_v<Result>
-constexpr Result transform(const Container &container, UnaryOperator f,
-                           Inserter insert, const Containers &...rest) {
-    using std::begin;
-    using std::end;
-    using std::size;
-
-    assert(((size(rest) >= size(container)) and ...));
-
-    Result result{};
-    if constexpr (my::reservable<Result, size_t>) {
-        result.reserve(size(container));
-    }
-    detail::transformImpl(begin(container), end(container), result,
-                           std::move(f), std::move(insert), begin(rest)...);
-    return result;
+template <std::ranges::range Container, std::weakly_incrementable Out,
+          class NaryOperator, std::ranges::range... Containers>
+constexpr Out
+transform(const Container &container, Out result,
+          NaryOperator f,
+          const Containers &...rest) {
+    return my::transform(std::ranges::begin(container),
+                         std::ranges::end(container),
+                         std::move(result),
+                         std::move(f),
+                         std::ranges::begin(rest)...);
 }
 
 /**
@@ -241,19 +200,16 @@ any(InIt first, InIt last, Predicate pred,
  * @param rest
  * @return constexpr my::require_iterable<Container, bool>
  */
-template <class Predicate, my::iterable Container,
-          my::iterable... Containers>
+template <class Predicate, std::ranges::range Container,
+          std::ranges::range... Containers>
 constexpr bool
 any(Container &&container, Predicate pred,
     Containers &&...rest) {
-    using std::cbegin;
-    using std::cend;
-    using std::size;
-
     assert(((size(rest) >= size(container)) and ...));
-    return my::any(cbegin(container), cend(container),
+    return my::any(std::ranges::cbegin(container),
+                   std::ranges::cend(container),
                    pred,
-                   cbegin(rest)...);
+                   std::ranges::cbegin(rest)...);
 }
 
 /**
@@ -273,8 +229,10 @@ template <class Predicate, std::input_iterator InIt,
 constexpr InIt
 all(InIt first, InIt last, Predicate pred,
     Iterators... rest) {
-    return not my::any(std::move(first), std::move(last), my::negate(pred),
-                   std::move(rest)...);
+    return not my::any(std::move(first),
+                       std::move(last),
+                       my::negate(pred),
+                       std::move(rest)...);
 }
 
 /**
@@ -288,19 +246,16 @@ all(InIt first, InIt last, Predicate pred,
  * @param rest
  * @return constexpr my::require_iterable<Container, bool>
  */
-template <class Predicate, my::iterable Container,
-          my::iterable... Containers>
+template <class Predicate, std::ranges::range Container,
+          std::ranges::range... Containers>
 constexpr bool
 all(Container &&container, Predicate pred,
     Containers &&...rest) {
-    using std::cbegin;
-    using std::cend;
-    using std::size;
-
     assert(((size(rest) >= size(container)) and ...));
-    return my::all(cbegin(container), cend(container),
+    return my::all(std::ranges::cbegin(container),
+                   std::ranges::cend(container),
                    pred,
-                   cbegin(rest)...);
+                   std::ranges::cbegin(rest)...);
 }
 
 /**
@@ -343,21 +298,17 @@ reduce(InIt first, InIt last, Accum accum, NaryFunction f,
  * @param rest containers to iterate in parallel (optional)
  * @return Accumulated value
  */
-template <class NaryFunction, class Accum, my::iterable Container,
-          my::iterable... Containers>
+template <class NaryFunction, class Accum, std::ranges::range Container,
+          std::ranges::range... Containers>
 constexpr Accum
 reduce(Container &&container, Accum accum, NaryFunction f,
        Containers &&...rest) {
-    using std::cbegin;
-    using std::cend;
-    using std::size;
-
     assert(((size(rest) >= size(container)) and ...));
-    return my::reduce(cbegin(container), cend(container),
-                      std::move(accum), std::move(f),
-                      cbegin(rest)...);
+    return my::reduce(std::ranges::cbegin(container),
+                      std::ranges::cend(container),
+                      std::move(accum),
+                      std::move(f),
+                      std::ranges::cbegin(rest)...);
 }
 
 }  // namespace my
-
-#endif  // MY_ALGORITHM_HPP

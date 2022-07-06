@@ -1,6 +1,4 @@
 #pragma once
-#ifndef MY_WIN_DEFINES_HPP
-#define MY_WIN_DEFINES_HPP
 #ifndef NOMINMAX
 #define NOMINMAX 1
 #endif
@@ -22,4 +20,3 @@
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;  \
     SetConsoleMode(hOut, dwMode)
 
-#endif  // MY_WIN_DEFINES_HPP

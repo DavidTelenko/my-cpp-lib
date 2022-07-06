@@ -86,21 +86,7 @@ class NonMovable {
 
 }  // namespace my
 
-#ifndef DISABLE_MY_MACROS
-
-#define CONCAT_IMPL(A, B) A##B
-#define CONCAT(A, B) CONCAT_IMPL(A, B)
-
-#ifdef USE_FINALLY_MACRO
-#define finally(f) \
-    const auto CONCAT(final_action_temporary_variable_at_line_, __LINE__) = my::finally([]() f)
-#endif  // USE_FINALLY_MACRO
-
-#ifdef USE_SCOPE_EXIT_MACRO
-#define ON_SCOPE_EXIT(f) \
-    const auto CONCAT(scope_exit_temporary_variable_at_line_, __LINE__) = my::finally([]() f)
-#endif  // USE_SCOPE_EXIT_MACRO
-
-#endif  // DISABLE_MY_MACROS
+#define FINALLY(f) \
+    const auto CONCAT(_final_action_temporary_variable_at_line_, __LINE__) = my::finally([]() f)
 
 #endif  // MY_UTILITY_HPP

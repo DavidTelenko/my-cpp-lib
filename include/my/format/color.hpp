@@ -8,8 +8,6 @@
 
 namespace my {
 
-inline namespace fmt {
-
 /**
  * @brief Sets foreground into os
  *
@@ -228,7 +226,5 @@ inline void printf(Color foreground,
                    const char* format, Args&&... args) {
     printf(std::cout, foreground, format, args...);
 }
-
-}  // namespace fmt
 
 }  // namespace my

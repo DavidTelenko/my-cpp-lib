@@ -1,9 +1,8 @@
 #pragma once
-#ifndef MY_FUNCTIONAL_HPP
-#define MY_FUNCTIONAL_HPP
 
-#include <functional>
 #include <my/util/traits.hpp>
+//
+#include <functional>
 
 // function objects and lambda generators
 
@@ -145,7 +144,7 @@ struct equalToValue {
 };
 
 /**
- * @brief Negate predicate functor geenrator
+ * @brief Negate predicate functor generator
  *
  * @tparam Predicate functor
  */
@@ -178,7 +177,7 @@ concept invocable_with_projection =
  * value from an object.
  * In detail general mechanism of this generator is the following:
  * For each functor pointer will be added if a functor is a function.
- * project declares variadic opearator()() in which
+ * project declares variadic operator()() in which
  * projection will be applied for each received argument
  * and then passed into destination functor.
  *
@@ -301,7 +300,7 @@ struct compare {
 
     /**
      * @brief Appends secondary projection for less comparison.
-     * If pripary condition evaluates to a == b, then a < b with
+     * If primary condition evaluates to a == b, then a < b with
      * provided projection will be called
      *
      * @param p secondary projection for std::less function
@@ -348,104 +347,4 @@ overload(Ts...) -> overload<Ts...>;
 
 // for my::algorithms
 
-/**
- * @brief
- *
- */
-class BackInserter {
-   public:
-    template <my::iterable Container, std::common_with<
-                                          my::value_t<Container>>
-                                          T>
-    constexpr void operator()(Container &container, T &&val) const {
-        container.push_back(std::forward<T>(val));
-    }
-};
-
-/**
- * @brief
- *
- */
-class FrontInserter {
-   public:
-    template <my::iterable Container, std::common_with<
-                                          my::value_t<Container>>
-                                          T>
-    constexpr void operator()(Container &container, T &&val) const {
-        container.push_front(std::forward<T>(val));
-    }
-};
-
-/**
- * @brief
- *
- */
-class Inserter {
-   public:
-    template <my::iterable Container, std::common_with<
-                                          my::value_t<Container>>
-                                          T>
-    constexpr void operator()(Container &container, T &&val) const {
-        container.insert(std::forward<T>(val));
-    }
-};
-
-// UB prune
-/**
- * @brief
- *
- */
-class ArrayInserter {
-   public:
-    constexpr explicit ArrayInserter(size_t start = 0, size_t step = 1)
-        : start_(start), step_(step) {}
-
-    template <my::iterable Container, std::common_with<
-                                          my::value_t<Container>>
-                                          T>
-    constexpr auto operator()(Container &container, T &&val) {
-        using std::size;
-        assert(start_ < size(container));
-        container[start_] = std::forward<T>(val);
-        start_ += step_;
-    }
-
-   private:
-    size_t start_, step_;
-};
-
-// switch gate
-// push_back -> insert -> array_insert -> push_front
-/**
- * @brief
- *
- * @tparam Iterable
- * @return constexpr auto
- */
-template <my::iterable Iterable>
-constexpr auto decide_inserter() noexcept {
-    if constexpr (my::applicable_v<my::detail::call_push_back, Iterable>) {
-        return my::BackInserter{};
-    } else if (my::applicable_v<my::detail::call_insert, Iterable>) {
-        return my::Inserter{};
-    } else if (my::applicable_v<my::detail::call_square_brackets, Iterable>) {
-        return my::ArrayInserter{};
-    } else if (my::applicable_v<my::detail::call_push_front, Iterable>) {
-        return my::FrontInserter{};
-    } else {
-        return;
-    }
-}
-
-// type trait
-template <class Iterable>
-struct inserter_for {
-    using type = decltype(decide_inserter<Iterable>());
-};
-
-template <class Iterable>
-using inserter_for_t = typename inserter_for<Iterable>::type;
-
 }  // namespace my
-
-#endif  // MY_FUNCTIONAL_HPP

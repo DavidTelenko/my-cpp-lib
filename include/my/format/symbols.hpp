@@ -2,8 +2,6 @@
 
 namespace my {
 
-inline namespace fmt {
-
 enum class Style {
     Ascii,
     Basic,
@@ -34,7 +32,5 @@ constexpr const char* const styles[][11] = {
     // [HeavyDashed] =
     {"╍", "╏", "┏", "┳", "┓", "┣", "╋", "┫", "┗", "┻", "┛"},
 };
-
-}  // namespace fmt
 
 }  // namespace my

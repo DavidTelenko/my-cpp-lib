@@ -2,7 +2,7 @@
 #ifndef MY_RANGE_HPP
 #define MY_RANGE_HPP
 
-#include <my/util/utils.hpp>
+#include <my/util/traits.hpp>
 //
 #include <cassert>
 
@@ -132,42 +132,6 @@ class Range {
     }
 
     /**
-     * @brief Inserts range into provided container
-     *
-     * @tparam Container any container
-     * @tparam InserterT inserter function witch takes reference to container and value to insert
-     * @param container reference to container where to insert elements
-     * @param in inserter function
-     */
-    template <class Container>
-    constexpr void insert(Container &container) const {
-        using c_val_type = typename Container::value_type;
-        using c_size_type = typename Container::size_type;
-
-        static_assert(std::is_convertible_v<c_val_type, value_type>);
-
-        if (my::has_reserve_v<Container>) {
-            container.reserve(static_cast<c_size_type>(_amount));
-        }
-
-        for (value_type n = _start; n < _stop; n += _step) {
-            in(container, n);
-        }
-
-        return container;
-    }
-
-    /**
-     * @brief Same as insert(), but container will be created and returned in the proccess
-     *
-     */
-    template <class Container, class InserterT = my::inserter_for_t<Container>>
-    constexpr Container convert(InserterT in = InserterT{}) const {
-        Container container;
-        return insert(container, in);
-    }
-
-    /**
      * @brief Prints range into ostream,
      * uses static cache to save printed data,
      * next call of the function will print this
@@ -208,11 +172,8 @@ class Range {
     value_type step() const noexcept { return _step; }
 
     value_type operator[](size_t index) {
-        value_type res = _start;
-        while (index--) {
-            res += _step;
-            if (res >= _stop) return res;
-        }
+        const auto res = _start + _step * index;
+        if (res > _stop) return _stop;
         return res;
     }
 
@@ -227,7 +188,7 @@ class Range {
     const size_t _amount;
 };
 
-template <class T>
+template <my::arithmetic T>
 explicit Range(T, T, T) -> Range<T>;
 
 template <my::arithmetic T>

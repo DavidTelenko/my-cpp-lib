@@ -13,13 +13,11 @@
 
 namespace my {
 
-inline namespace fmt {
-
 namespace detail {
 
 template <class Ch, class Tr>
 [[maybe_unused]] constexpr void
-printf(std::basic_ostream<Ch, Tr>& os, const Ch* format) {
+_printf(std::basic_ostream<Ch, Tr>& os, const Ch* format) {
     os << format;
 }
 
@@ -27,8 +25,8 @@ template <class Ch, class Tr,
           my::representable<std::basic_ostream<Ch, Tr>> Arg,
           my::representable<std::basic_ostream<Ch, Tr>>... Args>
 constexpr void
-printf(std::basic_ostream<Ch, Tr>& os,
-       const Ch* format, Arg&& arg, Args&&... args) {
+_printf(std::basic_ostream<Ch, Tr>& os,
+        const Ch* format, Arg&& arg, Args&&... args) {
     for (; *format != '\0'; ++format) {
         if (*format == '{') {
             if (*(format + 1) != '}') {
@@ -36,8 +34,8 @@ printf(std::basic_ostream<Ch, Tr>& os,
                 continue;
             }
             my::represent(os, arg);
-            return detail::printf(os, (format + 2),
-                                  std::forward<Args>(args)...);
+            return detail::_printf(os, (format + 2),
+                                   std::forward<Args>(args)...);
         }
         os << *format;
     }
@@ -59,7 +57,7 @@ template <class Ch, class Tr,
 constexpr void
 printf(std::basic_ostream<Ch, Tr>& os,
        const Ch* format, Args&&... args) {
-    detail::printf(os, format, std::forward<Args>(args)...);
+    detail::_printf(os, format, std::forward<Args>(args)...);
 }
 
 /**
@@ -73,9 +71,9 @@ template <class Ch, my::representable<std::basic_ostream<Ch>>... Args>
 constexpr void
 printf(const Ch* format, Args&&... args) {
     if constexpr (std::same_as<Ch, wchar_t>) {
-        detail::printf(std::wcout, format, std::forward<Args>(args)...);
+        detail::_printf(std::wcout, format, std::forward<Args>(args)...);
     } else {
-        detail::printf(std::cout, format, std::forward<Args>(args)...);
+        detail::_printf(std::cout, format, std::forward<Args>(args)...);
     }
 }
 
@@ -88,15 +86,13 @@ printf(const Ch* format, Args&&... args) {
  *
  * @return std::string new object with printed ouput
  */
-template <class Ch, class Tr,
-          my::representable<std::basic_ostream<Ch, Tr>>... Args>
-inline std::basic_string<Ch, Tr>
+template <class Ch,
+          my::representable<std::basic_ostream<Ch>>... Args>
+[[nodiscard]] inline auto
 format(const Ch* format, Args&&... args) {
-    std::basic_stringstream<Ch, Tr> ss;
-    detail::printf(ss, format, std::forward<Args>(args)...);
+    std::basic_stringstream<Ch> ss;
+    detail::_printf(ss, format, std::forward<Args>(args)...);
     return ss.str();
 }
-
-}  // namespace fmt
 
 }  // namespace my

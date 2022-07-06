@@ -1,6 +1,6 @@
 #pragma once
 
-#include <my/format/join.hpp>
+#include <my/format/repr.hpp>
 #include <my/format/symbols.hpp>
 #include <my/util/str_utils.hpp>
 //
@@ -9,8 +9,6 @@
 #include <vector>
 
 namespace my {
-
-inline namespace fmt {
 
 template <class Ch = char, class Tr = std::char_traits<Ch>>
 struct Table {
@@ -364,8 +362,8 @@ struct Table {
     }
 
     template <class It,
-              my::printable<ostream_t> Arg,
-              my::printable<ostream_t>... Args>
+              my::representable<ostream_t> Arg,
+              my::representable<ostream_t>... Args>
     auto readVariadicRowImpl_(std::vector<string_t>& row, It size_iter,
                               Arg&& arg, Args&&... args) {
         const auto value = my::represent.get<Ch, Tr>(arg);
@@ -385,7 +383,7 @@ struct Table {
         }
     }
 
-    template <my::printable<ostream_t>... Args>
+    template <my::representable<ostream_t>... Args>
     auto readVariadicRow_(Args&&... args) {
         constexpr size_t size = sizeof...(args);
 
@@ -402,13 +400,12 @@ struct Table {
         return row;
     }
 
-    template <my::printable<ostream_t> Arg, my::printable<ostream_t>... Args>
+    template <my::representable<ostream_t> Arg,
+              my::representable<ostream_t>... Args>
     inline auto receiveRow_(Arg&& arg, Args&&... args) {
-        if constexpr (sizeof...(args) == 0 and my::is_iterable_v<Arg>) {
-            using std::begin;
-            using std::end;
-            return readRow_(begin(std::forward<Arg>(arg)),
-                            end(std::forward<Arg>(arg)));
+        if constexpr (sizeof...(args) == 0 and std::ranges::range<Arg>) {
+            return readRow_(std::ranges::begin(std::forward<Arg>(arg)),
+                            std::ranges::end(std::forward<Arg>(arg)));
         } else {
             return readVariadicRow_(std::forward<Arg>(arg),
                                     std::forward<Args>(args)...);
@@ -437,7 +434,7 @@ struct Table {
 namespace detail {
 
 template <std::ranges::range T>
-auto tableIterable(const T& iterable) {
+auto _tableIterable(const T& iterable) {
     Table t;
     t.reserve(std::ranges::size(iterable));
 
@@ -449,7 +446,7 @@ auto tableIterable(const T& iterable) {
 }
 
 template <my::associative_container T>
-auto tableMap(const T& map) {
+auto _tableMap(const T& map) {
     Table t;
     t.reserve(std::ranges::size(map));
 
@@ -460,8 +457,8 @@ auto tableMap(const T& map) {
     return t;
 }
 
-template <my::iterable T, class... Projections>
-auto tableObjects(const T& objects, Projections... proj) {
+template <std::ranges::range T, class... Projections>
+auto _tableObjects(const T& objects, Projections... proj) {
     Table t;
     t.reserve(std::ranges::size(objects));
 
@@ -489,9 +486,9 @@ auto tableObjects(const T& objects, Projections... proj) {
 template <std::ranges::range T>
 constexpr auto table(const T& val) {
     if constexpr (my::is_associative_container_v<T>) {
-        return detail::tableMap(val);
+        return detail::_tableMap(val);
     } else {
-        return detail::tableIterable(val);
+        return detail::_tableIterable(val);
     }
 }
 
@@ -509,9 +506,7 @@ constexpr auto table(const T& val) {
  */
 template <std::ranges::range T, class... Projections>
 constexpr auto table(const T& val, Projections... proj) {
-    return detail::tableObjects(val, std::move(proj)...);
+    return detail::_tableObjects(val, std::move(proj)...);
 }
-
-}  // namespace fmt
 
 }  // namespace my
