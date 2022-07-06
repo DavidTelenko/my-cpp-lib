@@ -2,10 +2,11 @@
 #ifndef MY_TABLE_FORMAT_HPP
 #define MY_TABLE_FORMAT_HPP
 
-#include <cassert>
 #include <my/format/join.hpp>
 #include <my/format/symbols.hpp>
 #include <my/util/str_utils.hpp>
+//
+#include <cassert>
 #include <ranges>
 #include <vector>
 
@@ -27,7 +28,7 @@ struct Table {
      * will be interpreted as single element in the table.
      *
      * @note if subsequent calls of this method will receive
-     * more or less arguments then in first call assertion will fail.
+     * more or less arguments then in first call, assertion will fail.
      *
      * @param arg first parameter if it is single iterable argument,
      * then iterable specialization will be called
@@ -433,12 +434,12 @@ struct Table {
     const uint16_t _pad = 2;
 };
 
-template <my::iterable T>
-auto tableIterable(const T& iterable) {
-    using std::size;
+namespace detail {
 
+template <std::ranges::range T>
+auto tableIterable(const T& iterable) {
     Table t;
-    t.reserve(size(iterable));
+    t.reserve(std::ranges::size(iterable));
 
     for (auto&& el : iterable) {
         t.pushRow(el);
@@ -449,10 +450,8 @@ auto tableIterable(const T& iterable) {
 
 template <my::associative_container T>
 auto tableMap(const T& map) {
-    using std::size;
-
     Table t;
-    t.reserve(size(map));
+    t.reserve(std::ranges::size(map));
 
     for (auto&& el : map) {
         t.pushRow(el.first, el.second);
@@ -463,10 +462,8 @@ auto tableMap(const T& map) {
 
 template <my::iterable T, class... Projections>
 auto tableObjects(const T& objects, Projections... proj) {
-    using std::size;
-
     Table t;
-    t.reserve(size(objects));
+    t.reserve(std::ranges::size(objects));
 
     for (auto&& el : objects) {
         t.pushRow(std::invoke(proj, el)...);
@@ -475,18 +472,44 @@ auto tableObjects(const T& objects, Projections... proj) {
     return t;
 }
 
-template <my::iterable T>
+}  // namespace detail
+
+/**
+ * @brief Creates ASCII table from std::range, if value is an associative container
+ * table will be formed as 2xN table with key value pairs in each row, otherwise
+ * if range itself contains ranges each range element will occupy each element in row,
+ * else if inside of range there is just printable values table will be formed as
+ * 1xN table with each element in single row
+ * 
+ *
+ * @tparam T std::range
+ * @param val value to represent as table
+ * @return printable Table object
+ */
+template <std::ranges::range T>
 constexpr auto table(const T& val) {
     if constexpr (my::is_associative_container_v<T>) {
-        return tableMap(val);
+        return detail::tableMap(val);
     } else {
-        return tableIterable(val);
+        return detail::tableIterable(val);
     }
 }
 
-template <my::iterable T, class... Projections>
+/**
+ * @brief Creates ASCII table from iterable of objects, provide projections
+ * for each field of structure to represent it in row as string, each return value)
+ * of projection must be printable.
+ *
+ * @tparam T std::range
+ * @tparam Projections functions or projections that can be
+ * invocable with expression std::invoke(proj, object
+ * @param val range of objects
+ * @param proj functions to project each value
+ * @return printable Table object
+ */
+template <std::ranges::range T, class... Projections>
 constexpr auto table(const T& val, Projections... proj) {
-    return tableObjects(val, std::move(proj)...);
+    return detail::tableObjects(val, std::move(proj)...);
 }
 
 }  // namespace my

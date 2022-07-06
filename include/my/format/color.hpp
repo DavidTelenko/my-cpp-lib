@@ -9,6 +9,7 @@
 #include <iostream>
 
 namespace my {
+
 /**
  * @brief Sets foreground into os
  *

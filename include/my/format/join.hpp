@@ -18,18 +18,18 @@ concept pair_like = requires(T val) {
 template <class T,
           class Ch, class Tr,
           class R = std::remove_reference_t<T>>
-concept default_representable =
+concept representable =
     std::ranges::range<R> or
     my::is_tuple_v<R> or
     pair_like<R> or
     std::input_or_output_iterator<R> or
     my::printable<R, std::basic_ostream<Ch, Tr>>;
 
-template <class Ch, class Tr, default_representable<Ch, Tr> T>
+template <class Ch, class Tr, representable<Ch, Tr> T>
 constexpr void represent(std::basic_ostream<Ch, Tr>& os, const T& value);
 
 struct DefaultRepresenter {
-    template <class Ch, class Tr, default_representable<Ch, Tr> T>
+    template <class Ch, class Tr, representable<Ch, Tr> T>
     constexpr void operator()(std::basic_ostream<Ch, Tr>& os,
                               const T& value) const {
         represent<Ch, Tr>(os, value);
@@ -55,7 +55,6 @@ class JoinedRangeView {
         return os;
     }
 
-   private:
     template <class Ch, class Tr>
     constexpr void print(std::basic_ostream<Ch, Tr>& os) const {
         if (_first == _last) return;
@@ -93,7 +92,6 @@ class JoinedTupleView {
         return os;
     }
 
-   private:
     template <class Ch, class Tr>
     constexpr void print(std::basic_ostream<Ch, Tr>& os) const {
         using namespace detail;
@@ -212,7 +210,7 @@ struct JoinFunction {
 
 constexpr JoinFunction join;
 
-template <class Ch, class Tr, default_representable<Ch, Tr> T>
+template <class Ch, class Tr, representable<Ch, Tr> T>
 constexpr void represent(std::basic_ostream<Ch, Tr>& os, const T& value) {
     if constexpr (my::printable<T>) {
         os << value;
@@ -228,14 +226,14 @@ constexpr void represent(std::basic_ostream<Ch, Tr>& os, const T& value) {
     return;
 }
 
-template <class Ch, class Tr, default_representable<Ch, Tr> T>
+template <class Ch, class Tr, representable<Ch, Tr> T>
 std::basic_string<Ch, Tr> represent(const T& value) {
     std::basic_stringstream<Ch, Tr> ss;
     represent(ss, value);
     return ss.str();
 }
 
-template <default_representable<char, std::char_traits<char>> T>
+template <representable<char, std::char_traits<char>> T>
 std::string represent(const T& value) {
     return represent<char, std::char_traits<char>>(value);
 }
