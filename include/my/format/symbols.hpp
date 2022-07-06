@@ -1,8 +1,8 @@
 #pragma once
-#ifndef MY_SYMBOLS_HPP
-#define MY_SYMBOLS_HPP
 
 namespace my {
+
+inline namespace fmt {
 
 enum class Style {
     Ascii,
@@ -35,6 +35,6 @@ constexpr const char* const styles[][11] = {
     {"╍", "╏", "┏", "┳", "┓", "┣", "╋", "┫", "┗", "┻", "┛"},
 };
 
-}  // namespace my
+}  // namespace fmt
 
-#endif  // MY_SYMBOLS_HPP
+}  // namespace my

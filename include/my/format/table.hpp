@@ -1,6 +1,4 @@
 #pragma once
-#ifndef MY_TABLE_FORMAT_HPP
-#define MY_TABLE_FORMAT_HPP
 
 #include <my/format/join.hpp>
 #include <my/format/symbols.hpp>
@@ -11,6 +9,8 @@
 #include <vector>
 
 namespace my {
+
+inline namespace fmt {
 
 template <class Ch = char, class Tr = std::char_traits<Ch>>
 struct Table {
@@ -350,7 +350,7 @@ struct Table {
                   size_end = _sizes.end();
              begin != end and size_iter != size_end;
              ++begin, ++size_iter) {
-            const auto value = my::represent<Ch, Tr>(begin);
+            const auto value = my::represent.get<Ch, Tr>(begin);
             const size_t value_size = value.size();
 
             if (value_size > *size_iter) {
@@ -368,7 +368,7 @@ struct Table {
               my::printable<ostream_t>... Args>
     auto readVariadicRowImpl_(std::vector<string_t>& row, It size_iter,
                               Arg&& arg, Args&&... args) {
-        const auto value = my::represent<Ch, Tr>(arg);
+        const auto value = my::represent.get<Ch, Tr>(arg);
         const size_t value_size = value.size();
 
         if (value_size > *size_iter) {
@@ -480,7 +480,7 @@ auto tableObjects(const T& objects, Projections... proj) {
  * if range itself contains ranges each range element will occupy each element in row,
  * else if inside of range there is just printable values table will be formed as
  * 1xN table with each element in single row
- * 
+ *
  *
  * @tparam T std::range
  * @param val value to represent as table
@@ -512,5 +512,6 @@ constexpr auto table(const T& val, Projections... proj) {
     return detail::tableObjects(val, std::move(proj)...);
 }
 
+}  // namespace fmt
+
 }  // namespace my
-#endif  // MY_TABLE_FORMAT_HPP

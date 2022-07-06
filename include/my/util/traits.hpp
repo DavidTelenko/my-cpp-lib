@@ -315,11 +315,11 @@ using call_push_front =
 
 // concepts
 
-template <class T, class Ostream = std::ostream>
-concept printable =
-    requires(std::remove_reference_t<Ostream>& os,
-             const std::remove_reference_t<T>& obj) {
-    { os << obj } -> std::same_as<std::remove_reference_t<Ostream>&>;
+template <class T, class Ostream = std::ostream,
+          class R = std::remove_reference_t<T>,
+          class O = std::remove_reference_t<Ostream>>
+concept printable = requires(O& os, const R& obj) {
+    { os << obj } -> std::same_as<O&>;
 };
 
 template <class T>
