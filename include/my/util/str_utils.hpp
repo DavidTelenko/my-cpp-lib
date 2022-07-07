@@ -2,117 +2,91 @@
 #ifndef MY_STRING_UTILS_HPP
 #define MY_STRING_UTILS_HPP
 
-#include <my/util/algorithm.hpp>
-#include <my/util/num_parser.hpp>
-//
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
+#include <ranges>
 #include <vector>
 
 namespace my {
 
-template <my::iterable StringType,
-          class DelimType,
-          class Container = std::vector<StringType>,
-          class InserterT = my::inserter_for_t<Container>>
-inline Container split(const StringType &what,
-                       const DelimType &delim,
-                       InserterT insert = InserterT{}) {
-    using CharT = typename StringType::value_type;
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+inline std::vector<String> split(const String &what,
+                                 const String &delim) {
+    std::vector<String> result;
 
-    if constexpr (std::is_same_v<CharT, DelimType>) {
-        Container result;
+    size_t last = 0;
+    size_t next = 0;
 
-        std::basic_stringstream<CharT> ss(what);
-        StringType s;
-
-        while (std::getline(ss, s, delim)) {
-            insert(result, s);
-        }
-
-        return result;
-
-    } else {
-        using std::empty;
-        using std::size;
-
-        if (empty(delim)) {
-            return my::transform<Container>(
-                what,
-                [](auto el) { return StringType(1, el); },
-                std::move(insert));
-        }
-
-        Container result;
-
-        size_t last = 0;
-        size_t next = 0;
-
-        while ((next = what.find(delim, last)) != StringType::npos) {
-            insert(result, what.substr(last, next - last));
-            last = next + 1;
-        }
-        insert(result, what.substr(last));
-
-        return result;
+    while ((next = what.find(delim, last)) != String::npos) {
+        insert(result, what.substr(last, next - last));
+        last = next + 1;
     }
+    result.push_back(what.substr(last));
+
+    return result;
 }
 
-template <my::iterable StringType>
-auto &replaceFirst(StringType &where,
-                   const StringType &from, const StringType &to) {
-    if (auto pos = where.find(from); pos != StringType::npos)
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+auto &replaceFirst(String &where, const String &from, const String &to) {
+    if (auto pos = where.find(from); pos != String::npos)
         where.replace(pos, from.length(), to);
     return where;
 }
 
-template <my::iterable StringType>
-auto &replaceAll(StringType &where,
-                 const StringType &from, const StringType &to) {
-    typename StringType::size_type pos = 0;
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+auto &replaceAll(String &where,
+                 const String &from, const String &to) {
+    typename String::size_type pos = 0;
 
-    while ((pos = where.find(from, pos)) != StringType::npos) {
+    while ((pos = where.find(from, pos)) != String::npos) {
         where.replace(pos, from.size(), to);
         pos += to.size();
     }
     return where;
 }
 
-template <my::iterable StringType>
-StringType repeat(const StringType &what, size_t n) {
-    if (!n) return StringType{};
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+String repeat(const String &what, size_t n) {
+    if (!n) return String{};
     if (n == 1) return what;
 
-    StringType result;
+    String result;
     result.reserve(what.size() * n);
 
     while (n--) result.append(what);
     return result;
 }
 
-template <my::iterable StringType>
-auto &padStart(StringType &what, size_t targetLen,
-               typename StringType::value_type padding) {
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+auto &padStart(String &what, size_t targetLen,
+               typename String::value_type padding) {
     what.reserve(targetLen);
     return targetLen > what.size()
                ? what.insert(0, targetLen - what.size(), padding)
                : what;
 }
 
-template <my::iterable StringType>
-auto &padEnd(StringType &what, size_t targetLen,
-             typename StringType::value_type padding) {
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+auto &padEnd(String &what, size_t targetLen,
+             typename String::value_type padding) {
     what.reserve(targetLen);
     return targetLen > what.size()
                ? what.insert(what.size(), targetLen - what.size(), padding)
                : what;
 }
 
-template <my::iterable StringType>
-auto &pad(StringType &what, size_t targetLen,
-          typename StringType::value_type padding) {
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+auto &pad(String &what, size_t targetLen,
+          typename String::value_type padding) {
     if (targetLen <= what.size()) return what;
 
     const auto remainder = targetLen - what.size();
@@ -125,8 +99,9 @@ auto &pad(StringType &what, size_t targetLen,
     return what;
 }
 
-template <my::iterable StringType>
-auto &trimStart(StringType &what, typename StringType::value_type remove = ' ') {
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+auto &trimStart(String &what, typename String::value_type remove = ' ') {
     what.erase(what.begin(),
                std::find_if(what.begin(), what.end(),
                             [remove](auto ch) {
@@ -135,8 +110,9 @@ auto &trimStart(StringType &what, typename StringType::value_type remove = ' ') 
     return what;
 }
 
-template <my::iterable StringType>
-auto &trimEnd(StringType &what, typename StringType::value_type remove = ' ') {
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+auto &trimEnd(String &what, typename String::value_type remove = ' ') {
     what.erase(std::find_if(what.rbegin(), what.rend(),
                             [remove](auto ch) {
                                 return ch != remove;
@@ -146,27 +122,31 @@ auto &trimEnd(StringType &what, typename StringType::value_type remove = ' ') {
     return what;
 }
 
-template <my::iterable StringType>
-auto &trim(StringType &what, typename StringType::value_type remove = ' ') {
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+auto &trim(String &what, typename String::value_type remove = ' ') {
     return trimEnd(trimStart(what, remove), remove);
 }
 
-template <my::iterable StringType>
-auto &toUpper(StringType &what) {
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+auto &toUpper(String &what) {
     std::transform(what.begin(), what.end(), what.begin(),
                    [](auto ch) { return std::toupper(ch); });
     return what;
 }
 
-template <my::iterable StringType>
-auto &toLower(StringType &what) {
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+auto &toLower(String &what) {
     std::transform(what.begin(), what.end(), what.begin(),
                    [](auto ch) { return std::tolower(ch); });
     return what;
 }
 
-template <my::iterable StringType>
-auto &toTitle(StringType &what) {
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+auto &toTitle(String &what) {
     bool up = true;
     for (auto &el : what) {
         if (up) el = std::toupper(el);
@@ -193,13 +173,13 @@ auto strLength(T &&obj) { return my::toString(std::forward<T>(obj)).size(); }
  * @see https://en.wikipedia.org/wiki/Levenshtein_distance
  * @see https://rosettacode.org/wiki/Levenshtein_distance#C.2B.2B
  *
- * @tparam StringType any string like container with begin, end and size methods
+ * @tparam String any string like container with begin, end and size methods
  * @param lhs first string to compare
  * @param rhs second string to compare
  * @return size_t value representing Levenshtein distance between two strings
  */
-template <class StringType>
-size_t levDistance(const StringType &lhs, const StringType &rhs) {
+template <std::ranges::range String>
+size_t levDistance(const String &lhs, const String &rhs) {
     const size_t m = lhs.size();
     const size_t n = rhs.size();
 
@@ -228,6 +208,21 @@ size_t levDistance(const StringType &lhs, const StringType &rhs) {
     }
 
     return costs[n];
+}
+
+/**
+ * @brief Parses number to specified precision.
+ *
+ * @tparam Number of any arithmetic type
+ * @param str string_view of number
+ * @return Parsed Number as an std::optional
+ */
+template <my::arithmetic Number>
+inline constexpr std::optional<Number> parse(std::string_view str) {
+    std::istringstream ss(str.data());
+    Number result;
+    ss >> std::boolalpha >> result;
+    return ss.fail() ? std::nullopt : result;
 }
 
 template <typename Ch, typename Tr, typename Al, class Predicate>
@@ -283,4 +278,5 @@ getline(std::basic_istream<Ch, Tr> &in,
 }
 
 }  // namespace my
+
 #endif  // MY_STRING_UTILS_HPP

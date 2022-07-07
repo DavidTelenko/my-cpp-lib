@@ -1,6 +1,4 @@
 #pragma once
-#ifndef MY_COLOR_HPP
-#define MY_COLOR_HPP
 
 #include <cstdint>
 #include <iostream>
@@ -202,12 +200,6 @@ struct Color {
                      (hex & 0xFF));
     }
 
-    template <class Ch, class Tr>
-    friend auto& operator<<(std::basic_ostream<Ch, Tr>& os, const Color& col) {
-        my::printf(os, "rgb({}, {}, {})", +col.r, +col.g, +col.b);
-        return os;
-    }
-
     constexpr bool operator==(uint32_t hex) { return toHex(*this) == hex; }
     constexpr bool operator!=(uint32_t hex) { return !(*this == hex); }
 
@@ -215,5 +207,3 @@ struct Color {
 };
 
 }  // namespace my
-
-#endif  // MY_COLOR_HPP

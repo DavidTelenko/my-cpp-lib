@@ -1,9 +1,10 @@
 #pragma once
 
-#include <any>
-#include <functional>
 #include <my/util/cli/status.hpp>
 #include <my/util/str_utils.hpp>
+//
+#include <any>
+#include <functional>
 #include <ranges>
 #include <string>
 #include <unordered_map>
@@ -381,8 +382,8 @@ class Application {
     }
 
     Command& record(std::initializer_list<std::string> names) {
-        _names[names.front()] = names;
-        return _commands[names.front()];
+        _names[*names.begin()] = names;
+        return _commands[*names.begin()];
     }
 
     auto& constrainAll(std::initializer_list<std::string> names,

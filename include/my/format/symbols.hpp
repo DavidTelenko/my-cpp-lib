@@ -1,6 +1,4 @@
 #pragma once
-#ifndef MY_SYMBOLS_HPP
-#define MY_SYMBOLS_HPP
 
 namespace my {
 
@@ -36,5 +34,3 @@ constexpr const char* const styles[][11] = {
 };
 
 }  // namespace my
-
-#endif  // MY_SYMBOLS_HPP

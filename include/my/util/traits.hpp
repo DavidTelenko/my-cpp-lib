@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <iterator>
+#include <ranges>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -27,24 +28,6 @@ using applicable = detail::applicable<Trait, void, Ts...>;
 
 template <template <class...> class Trait, class... Ts>
 constexpr bool applicable_v = applicable<Trait, Ts...>::value;
-
-// is iterator
-
-template <class I, class = void>
-struct is_iterator : std::false_type {};
-template <>
-struct is_iterator<void*, void> : std::false_type {};
-template <>
-struct is_iterator<void const*, void> : std::false_type {};
-template <>
-struct is_iterator<void volatile*, void> : std::false_type {};
-template <>
-struct is_iterator<void const volatile*, void> : std::false_type {};
-template <class I>
-struct is_iterator<I, std::void_t<typename std::iterator_traits<I>::value_type>>
-    : std::true_type {};
-template <typename I>
-constexpr bool is_iterator_v = is_iterator<I>::value;
 
 // is tuple
 
@@ -87,21 +70,6 @@ constexpr bool is_associative_container_v = is_associative_container<T>::value;
 template <class T>
 concept associative_container = my::is_associative_container_v<T>;
 
-// has print operator
-
-namespace detail {
-
-template <class T, class Ostream>
-using call_print_operator = decltype(std::declval<Ostream&>()
-                                     << std::declval<const T&>());
-}  // namespace detail
-
-template <class T, class Ostream = std::ostream>
-using has_print_operator = applicable<detail::call_print_operator, T, Ostream>;
-
-template <class T, class Ostream = std::ostream>
-constexpr bool has_print_operator_v = has_print_operator<T, Ostream>::value;
-
 // has reserve
 
 namespace detail {
@@ -133,71 +101,6 @@ template <class T, class U>
 using call_equals = decltype(std::declval<T>() == std::declval<U>());
 
 }  // namespace detail
-
-template <class T, class U>
-using is_equality_comparable = std::conjunction<
-    applicable<detail::call_equals, T, U>,
-    applicable<detail::call_equals, U, T>>;
-
-template <class T, class U>
-using is_comparable = std::conjunction<
-    applicable<detail::call_less_than, T, U>,
-    applicable<detail::call_less_than, U, T>>;
-
-template <class T, class U>
-constexpr bool is_comparable_v = is_comparable<T, U>::value;
-
-template <class T, class U>
-constexpr bool is_equality_comparable_v = is_equality_comparable<T, U>::value;
-
-// is incrementable / decrementable
-
-namespace detail {
-
-template <class T>
-using call_increment = decltype(++std::declval<std::remove_reference_t<T>&>());
-
-template <class T>
-using call_decrement = decltype(--std::declval<std::remove_reference_t<T>&>());
-
-}  // namespace detail
-
-template <class T>
-using is_incrementable = my::applicable<detail::call_increment, T>;
-
-template <class T>
-using is_decrementable = my::applicable<detail::call_decrement, T>;
-
-template <class T>
-constexpr bool is_incrementable_v = is_incrementable<T>::value;
-
-template <class T>
-constexpr bool is_decrementable_v = is_decrementable<T>::value;
-
-// is iterable
-
-namespace detail {
-
-using std::begin;
-using std::end;
-
-template <class T>
-using call_begin = decltype(begin(std::declval<T>()));
-template <class T>
-using call_end = decltype(end(std::declval<T>()));
-
-}  // namespace detail
-
-template <class T>
-using is_iterable = std::conjunction<
-    applicable<detail::call_begin, T>,
-    applicable<detail::call_end, T>>;
-
-template <class T>
-constexpr bool is_iterable_v = is_iterable<T>::value;
-
-template <class T>
-concept iterable = my::is_iterable_v<T>;
 
 // is value
 
@@ -279,51 +182,26 @@ using make_member_function_t = typename make_member_function<F>::type;
 // callers and signature checks, details for functional and algorithms
 namespace detail {
 
-using std::begin;
-using std::end;
+template <std::ranges::range Iterable>
+using iterator_t = decltype(std::ranges::begin(std::declval<Iterable>()));
 
-template <my::iterable Iterable>
-using iterator_t = decltype(begin(std::declval<Iterable>()));
 }  // namespace detail
 
-template <my::iterable T>
+template <std::ranges::range T>
 using iterator_t = detail::iterator_t<T>;
 
-template <my::iterable Iterable>
+template <std::ranges::range Iterable>
 using value_t =
     typename std::iterator_traits<iterator_t<Iterable>>::value_type;
 
-namespace detail {
-
-template <my::iterable Iterable>
-using call_push_back =
-    decltype(std::declval<Iterable>().push_back(std::declval<value_t<Iterable>>()));
-
-template <my::iterable Iterable>
-using call_insert =
-    decltype(std::declval<Iterable>().insert(std::declval<value_t<Iterable>>()));
-
-template <my::iterable Iterable>
-using call_square_brackets =
-    decltype(std::declval<Iterable>()[0] = std::declval<value_t<Iterable>>());
-
-template <my::iterable Iterable>
-using call_push_front =
-    decltype(std::declval<Iterable>().push_front(std::declval<value_t<Iterable>>()));
-
-}  // namespace detail
-
 // concepts
 
-template <class T, class Ostream = std::ostream>
-concept printable =
-    requires(std::remove_reference_t<Ostream>& os,
-             const std::remove_reference_t<T>& obj) {
-    { os << obj } -> std::same_as<std::remove_reference_t<Ostream>&>;
+template <class T, class Ostream = std::ostream,
+          class R = std::remove_reference_t<T>,
+          class O = std::remove_reference_t<Ostream>>
+concept printable = requires(O& os, const R& obj) {
+    { os << obj } -> std::same_as<O&>;
 };
-
-template <class T>
-concept iterator_concept = my::is_iterator_v<T>;
 
 template <class T>
 concept arithmetic = std::is_arithmetic_v<T>;

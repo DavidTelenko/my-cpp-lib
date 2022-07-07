@@ -1,11 +1,11 @@
 #pragma once
-#ifndef MY_COLOR_PARSER_HPP
-#define MY_COLOR_PARSER_HPP
 
 #include <my/format/color.hpp>
 #include <my/util/str_utils.hpp>
 
-namespace {
+namespace my {
+
+namespace fmt {
 
 class ColorParser {
     inline static const std::map<std::string, my::Color> colors{
@@ -163,39 +163,23 @@ class ColorParser {
     }
 };
 
-}  // namespace
-
-namespace my {
-
-/**
- * @brief defines new color or overrides previous
- *
- * @param key string, must have at least 1 char
- * @param color Color value rgb or hex
- */
-void defineColor(const std::string& key, const my::Color color) {
-    ColorParser::defineColor(key, color);
-}
-
-/**
- * printcol():
- *
- * Parsing grammar:
- *     color      ::= user_color | inner_color | hex_value
- *     background ::= color
- *     foreground ::= color
- *     content    ::= text | text"{}"
- *     space      ::= " "+
- *     expression ::= "[#" foreground ["," [space] "#" background] ":" content "]"
- *
- * Example:
- *     my::defineColor("gold", my::Color::Gold); // defining our own color
- *     my::printcol("[#000000, #gold:[The answer is]] [#red:{}]", 42);
- *     // escaping ']' with even amount of opened and closed []
- */
-
 /**
  * @brief Prints formatted text with color using small substitution parsing.
+ *
+ * # Parsing grammar
+ * `color      ::= user_color | inner_color | hex_value`
+ * `background ::= color`
+ * `foreground ::= color`
+ * `content    ::= text | text"{}"`
+ * `space      ::= " "+`
+ * `expression ::= "[#" foreground ["," [space] "#" background] ":" content "]"`
+ *
+ * # Example
+ * ```
+ * my::ColorParser::defineColor("gold", my::Color::Gold); // defining our own color
+ * my::printcol("[#000000, #gold:[The answer is]] [#red:{}]", 42);
+ * // escaping ']' with even amount of opened and closed []
+ * ```
  *
  * @tparam Args any types
  * @param format format string
@@ -209,7 +193,7 @@ auto printcol(std::ostream& os, const char* format, Args&&... args) {
 };
 
 /**
- * @brief Prints formatted text with color using small substitution parsing.
+ * @brief Prints formatted text with color using substitution parsing.
  *
  * @tparam Args any types
  * @param format format string
@@ -227,6 +211,6 @@ auto formatcol(const char* format, Args&&... args) {
     return ss.str();
 }
 
-}  // namespace my
+}  // namespace fmt
 
-#endif  // MY_COLOR_PARSER_HPP
+}  // namespace my

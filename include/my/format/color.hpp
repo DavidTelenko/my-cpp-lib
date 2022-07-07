@@ -1,6 +1,4 @@
 #pragma once
-#ifndef MY_COLOR_FORMAT_HPP
-#define MY_COLOR_FORMAT_HPP
 
 #include <my/format/format.hpp>
 #include <my/util/color.hpp>
@@ -9,6 +7,7 @@
 #include <iostream>
 
 namespace my {
+
 /**
  * @brief Sets foreground into os
  *
@@ -229,5 +228,3 @@ inline void printf(Color foreground,
 }
 
 }  // namespace my
-
-#endif  // MY_COLOR_FORMAT_HPP

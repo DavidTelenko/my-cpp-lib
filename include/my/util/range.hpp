@@ -2,7 +2,7 @@
 #ifndef MY_RANGE_HPP
 #define MY_RANGE_HPP
 
-#include <my/util/utils.hpp>
+#include <my/util/traits.hpp>
 //
 #include <cassert>
 
@@ -16,9 +16,9 @@ namespace my {
  *
  * @tparam T data type of range elements, int32_t by default, only numeric values required
  */
-template <class T = int32_t>
+template <my::arithmetic T = int32_t>
 // typename std::enable_if_t<(std::is_arithmetic_v<T>), bool> = true
-class range {
+class Range {
     struct range_iterator;
 
    public:
@@ -32,17 +32,17 @@ class range {
 
    private:
     class range_iterator {
-        const value_type m_start;
-        const value_type m_stop;
-        const value_type m_step;
+        const value_type _start;
+        const value_type _stop;
+        const value_type _step;
         value_type m_curr;
 
         constexpr void increment(size_t amount) noexcept {
-            while (amount--) m_curr += m_step;
+            while (amount--) m_curr += _step;
         }
 
         constexpr void decrement(size_t amount) noexcept {
-            while (amount--) m_curr -= m_step;
+            while (amount--) m_curr -= _step;
         }
 
        public:
@@ -50,28 +50,28 @@ class range {
                                           value_type stop,
                                           value_type step,
                                           value_type curr) noexcept
-            : m_start(start), m_stop(stop), m_step(step), m_curr(curr) {
+            : _start(start), _stop(stop), _step(step), m_curr(curr) {
         }
 
         constexpr range_iterator &operator++() noexcept {
-            m_curr += m_step;
+            m_curr += _step;
             return *this;
         }
 
         constexpr range_iterator operator++(int) noexcept {
             auto tmp = *this;
-            m_curr += m_step;
+            m_curr += _step;
             return tmp;
         }
 
         constexpr range_iterator &operator--() noexcept {
-            m_curr -= m_step;
+            m_curr -= _step;
             return *this;
         }
 
         constexpr range_iterator operator--(int) noexcept {
             auto tmp = *this;
-            m_curr -= m_step;
+            m_curr -= _step;
             return tmp;
         }
 
@@ -90,9 +90,9 @@ class range {
         operator==(const range_iterator &lhs,
                    const range_iterator &rhs) noexcept {
             return lhs.m_curr == rhs.m_curr and
-                   lhs.m_start == rhs.m_start and
-                   lhs.m_stop == rhs.m_stop and
-                   lhs.m_step == rhs.m_step;
+                   lhs._start == rhs._start and
+                   lhs._stop == rhs._stop and
+                   lhs._step == rhs._step;
         }
         friend constexpr bool
         operator!=(const range_iterator &lhs,
@@ -107,64 +107,28 @@ class range {
      * @param stop Required. Position where to stop (not included).
      * @param step An increment value. 1 by default
      */
-    constexpr explicit range(value_type start,
+    constexpr explicit Range(value_type start,
                              value_type stop,
                              value_type step = 1) noexcept
-        : m_start(start),
-          m_stop(stop),
-          m_step(step),
-          m_amount((stop - start) / step) {
-        assert(m_amount > 0 and "amount of result items in container must be positive");
+        : _start(start),
+          _stop(stop),
+          _step(step),
+          _amount((stop - start) / step) {
+        assert(_amount > 0 and "amount of result items in container must be positive");
     }
     /**
      * @brief Create range object with start, end and step values.
      *
      * @param stop Required. Position where to stop (not included).
      */
-    constexpr explicit range(value_type stop) noexcept
-        : range(0, stop) {}
+    constexpr explicit Range(value_type stop) noexcept
+        : Range(0, stop) {}
 
     constexpr const_iterator begin() const noexcept {
-        return const_iterator(m_start, m_stop, m_step, m_start);
+        return const_iterator(_start, _stop, _step, _start);
     }
     constexpr const_iterator end() const noexcept {
-        return const_iterator(m_start, m_stop, m_step, m_stop);
-    }
-
-    /**
-     * @brief Inserts range into provided container
-     *
-     * @tparam Container any container
-     * @tparam InserterT inserter function witch takes reference to container and value to insert
-     * @param container reference to container where to insert elements
-     * @param in inserter function
-     */
-    template <class Container>
-    constexpr void insert(Container &container) const {
-        using c_val_type = typename Container::value_type;
-        using c_size_type = typename Container::size_type;
-
-        static_assert(std::is_convertible_v<c_val_type, value_type>);
-
-        if (my::has_reserve_v<Container>) {
-            container.reserve(static_cast<c_size_type>(m_amount));
-        }
-
-        for (value_type n = m_start; n < m_stop; n += m_step) {
-            in(container, n);
-        }
-
-        return container;
-    }
-
-    /**
-     * @brief Same as insert(), but container will be created and returned in the proccess
-     *
-     */
-    template <class Container, class InserterT = my::inserter_for_t<Container>>
-    constexpr Container convert(InserterT in = InserterT{}) const {
-        Container container;
-        return insert(container, in);
+        return const_iterator(_start, _stop, _step, _stop);
     }
 
     /**
@@ -186,9 +150,9 @@ class range {
 
         buffer << "[";
 
-        auto n = m_start;
+        auto n = _start;
 
-        for (; n < m_stop - m_step; n += m_step) {
+        for (; n < _stop - _step; n += _step) {
             buffer << n << ", ";
         }
 
@@ -198,37 +162,39 @@ class range {
         return os;
     }
 
-    value_type &start() noexcept { return m_start; }
-    value_type start() const noexcept { return m_start; }
+    value_type &start() noexcept { return _start; }
+    value_type start() const noexcept { return _start; }
 
-    value_type &stop() noexcept { return m_stop; }
-    value_type stop() const noexcept { return m_stop; }
+    value_type &stop() noexcept { return _stop; }
+    value_type stop() const noexcept { return _stop; }
 
-    value_type &step() noexcept { return m_step; }
-    value_type step() const noexcept { return m_step; }
+    value_type &step() noexcept { return _step; }
+    value_type step() const noexcept { return _step; }
 
     value_type operator[](size_t index) {
-        value_type res = m_start;
-        while (index--) {
-            res += m_step;
-            if (res >= m_stop) return res;
-        }
+        const auto res = _start + _step * index;
+        if (res > _stop) return _stop;
         return res;
     }
 
-    friend std::ostream &operator<<(std::ostream &os, const range &obj) {
+    friend std::ostream &operator<<(std::ostream &os, const Range &obj) {
         return obj.print(os);
     }
 
    private:
-    const value_type m_start;
-    const value_type m_stop;
-    const value_type m_step;
-    const size_t m_amount;
+    const value_type _start;
+    const value_type _stop;
+    const value_type _step;
+    const size_t _amount;
 };
 
-template <class T>
-explicit range(T, T, T) -> range<T>;
+template <my::arithmetic T>
+explicit Range(T, T, T) -> Range<T>;
+
+template <my::arithmetic T>
+constexpr auto range(T start, T stop, T step) {
+    return Range(start, stop, step);
+}
 
 }  // namespace my
 
