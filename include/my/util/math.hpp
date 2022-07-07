@@ -210,21 +210,6 @@ constexpr Number map(Number n,
 }
 
 /**
- * @brief Linearly interpolate between two values
- * @note glsl mix
- *
- * @tparam Number any arithmetic type
- * @param x The start of the range in which to interpolate.
- * @param y The end of the range in which to interpolate.
- * @param t The value to use to interpolate between x and y.
- * @return Interpolated value
- */
-template <std::floating_point Number = float>
-constexpr Number mix(Number x, Number y, Number t) {
-    return x * (1 - t) + y * t;
-}
-
-/**
  * @brief Linearly interpolate between two values (mix alias)
  *
  * @tparam Number any arithmetic type
@@ -235,7 +220,14 @@ constexpr Number mix(Number x, Number y, Number t) {
  */
 template <std::floating_point Number>
 constexpr Number lerp(Number x, Number y, Number t) {
-    return x * (1 - t) + y * t;
+    if ((x <= 0 and y >= 0) or (x >= 0 and y <= 0)) {
+        return x * (1 - t) + y * t;
+    }
+    if (t == 1) return y;
+
+    const Number res = x + t * (y - x);
+    return (t > 1) == (y > x) ? (y < res ? res : y)
+                              : (y > res ? res : y);
 }
 
 /**
