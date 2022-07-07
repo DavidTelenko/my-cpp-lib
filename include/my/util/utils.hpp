@@ -86,7 +86,7 @@ class NonMovable {
 
 }  // namespace my
 
-#define FINALLY(f) \
+#define finally(f) \
     const auto CONCAT(_final_action_temporary_variable_at_line_, __LINE__) = my::finally([]() f)
 
 #endif  // MY_UTILITY_HPP
