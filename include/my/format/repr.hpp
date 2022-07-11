@@ -55,6 +55,28 @@ class _RepresentableValueView {
 template <class Representer>
 struct _BaseRepresenter {
     template <class Ch, class Tr, class T>
+    constexpr void print(std::basic_ostream<Ch, Tr>& os,
+                         const T& value) const {
+        (static_cast<const Representer&>(*this))(os, value);
+    }
+
+    template <class T>
+    constexpr void print(const T& value) const {
+        (static_cast<const Representer&>(*this))(std::cout, value);
+    }
+
+    template <class Ch, class Tr, class T>
+    constexpr void println(std::basic_ostream<Ch, Tr>& os,
+                           const T& value) const {
+        print(os, value), os << '\n';
+    }
+
+    template <class T>
+    constexpr void println(const T& value) const {
+        println(std::cout, value);
+    }
+
+    template <class Ch, class Tr, class T>
     constexpr auto get(const T& value) const {
         std::basic_stringstream<Ch, Tr> ss;
         (static_cast<const Representer&>(*this))(ss, value);
@@ -63,9 +85,7 @@ struct _BaseRepresenter {
 
     template <class T>
     constexpr auto get(const T& value) const {
-        std::stringstream ss;
-        (static_cast<const Representer&>(*this))(ss, value);
-        return ss.str();
+        return get<char, std::char_traits<char>>(value);
     }
 
     template <class T>
@@ -115,10 +135,8 @@ struct RangeRepresenter
         auto it = first;
         _represent(os, *it);
 
-        for (++it; it != last;
-             ++it) {
-            os << _delim;
-            _represent(os, *it);
+        for (++it; it != last; ++it) {
+            os << _delim, _represent(os, *it);
         }
     }
 
@@ -149,8 +167,7 @@ struct RangeRepresenter
         if (!lastLength) return;
 
         if (size >= maxLength + lastLength) {
-            os << _delim;
-            (*this)(os, last - lastLength, last);
+            os << _delim, (*this)(os, last - lastLength, last);
         }
     }
 
@@ -170,7 +187,6 @@ struct RangeRepresenter
 };
 
 constexpr RangeRepresenter<DefaultRepresenter> rangeRepresent;
-constexpr RangeRepresenter<PrettyRepresenter> rangePrettyRepresent;
 
 template <class Representer = DefaultRepresenter>
 struct TupleRepresenter
@@ -199,13 +215,11 @@ struct TupleRepresenter
 };
 
 constexpr TupleRepresenter<DefaultRepresenter> tupleRepresent;
-constexpr TupleRepresenter<PrettyRepresenter> tuplePrettyRepresent;
 
 template <class T = DefaultRepresenter>
 using PairRepresenter = TupleRepresenter<T>;
 
 constexpr PairRepresenter<DefaultRepresenter> pairRepresent;
-constexpr PairRepresenter<PrettyRepresenter> pairPrettyRepresent;
 
 namespace detail {
 
@@ -240,25 +254,32 @@ constexpr void _quotedIfPossible(std::basic_ostream<Ch, Tr>& os,
     }
 }
 
+using PrettyRangeRepresenter = RangeRepresenter<PrettyRepresenter>;
+using PrettyTupleRepresenter = TupleRepresenter<PrettyRepresenter>;
+
+constexpr PrettyTupleRepresenter _tuplePrettyRepresent;
+constexpr PrettyRangeRepresenter _rangeOfValuesPrettyRepresent;
+constexpr PrettyRangeRepresenter _rangeOfRangesOrTuplesRepresent(",\n");
+
 template <class Ch, class Tr, representable<std::basic_ostream<Ch, Tr>> T>
 constexpr void _prettyRepresent(std::basic_ostream<Ch, Tr>& os,
                                 const T& value) {
     if constexpr (my::printable<T>) {
         _quotedIfPossible(os, value);
     } else if constexpr (std::ranges::range<T>) {
+        using value_t = std::ranges::range_value_t<T>;
         os << '[';
-        rangePrettyRepresent(os, value, 5, 5);  // maybe print amount between
-        os << ']' << '\n';
-        // TODO newlines after nested ranges/tuples
+        if constexpr (std::ranges::range<value_t> or my::tuple_like<value_t>) {
+            _rangeOfRangesOrTuplesRepresent(os, value, 5, 5);
+        } else {
+            _rangeOfValuesPrettyRepresent(os, value, 5, 5);  // maybe print amount between
+        }
+        os << ']';
     } else if constexpr (my::tuple_like<T>) {
-        os << '(';
-        tuplePrettyRepresent(os, value);
-        os << ')';
-        // TODO newlines after nested tuples/ranges
+        os << '(', _tuplePrettyRepresent(os, value), os << ')';
     } else if constexpr (std::input_or_output_iterator<T>) {
         _prettyRepresent(os, *value);
     }
-    return;
 }
 
 }  // namespace detail
