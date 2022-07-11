@@ -1,7 +1,7 @@
 #pragma once
 
 #include <my/util/functional.hpp>
-#include <my/util/traits.hpp>
+#include <my/util/meta.hpp>
 //
 #include <cassert>
 #include <ranges>
@@ -20,8 +20,7 @@ namespace my {
  * @return It iterator pointing to the major element or to last if not found one
  */
 template <std::input_iterator It,
-          class BiPredicate =
-              std::equal_to<typename std::iterator_traits<It>::value_type>>
+          class BiPredicate = std::equal_to<std::iter_value_t<It>>>
 constexpr It
 majority(It first, It last, BiPredicate pred = BiPredicate{}) {
     if (first == last) return first;
@@ -62,7 +61,8 @@ majority(It first, It last, BiPredicate pred = BiPredicate{}) {
  * @return constexpr auto
  */
 template <std::ranges::range Container,
-          class BiPredicate = std::equal_to<my::value_t<Container>>>
+          class BiPredicate =
+              std::equal_to<std::ranges::range_value_t<Container>>>
 constexpr auto
 majority(const Container &container, BiPredicate pred = BiPredicate{}) {
     return my::majority(std::ranges::begin(container),
@@ -205,7 +205,7 @@ template <class Predicate, std::ranges::range Container,
 constexpr bool
 any(Container &&container, Predicate pred,
     Containers &&...rest) {
-    assert(((size(rest) >= size(container)) and ...));
+    assert(((std::ranges::size(rest) >= std::ranges::size(container)) and ...));
     return my::any(std::ranges::cbegin(container),
                    std::ranges::cend(container),
                    pred,
@@ -251,7 +251,7 @@ template <class Predicate, std::ranges::range Container,
 constexpr bool
 all(Container &&container, Predicate pred,
     Containers &&...rest) {
-    assert(((size(rest) >= size(container)) and ...));
+    assert(((std::ranges::size(rest) >= std::ranges::size(container)) and ...));
     return my::all(std::ranges::cbegin(container),
                    std::ranges::cend(container),
                    pred,
@@ -303,7 +303,7 @@ template <class NaryFunction, class Accum, std::ranges::range Container,
 constexpr Accum
 reduce(Container &&container, Accum accum, NaryFunction f,
        Containers &&...rest) {
-    assert(((size(rest) >= size(container)) and ...));
+    assert(((std::ranges::size(rest) >= std::ranges::size(container)) and ...));
     return my::reduce(std::ranges::cbegin(container),
                       std::ranges::cend(container),
                       std::move(accum),

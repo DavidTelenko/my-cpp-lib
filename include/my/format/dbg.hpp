@@ -2,18 +2,14 @@
 
 #include <my/format/format.hpp>
 
-// #ifndef __GNUC__
-// #error "This feature is only available for gcc compiler family"
-// #endif
-
 /**
  * @brief dirty debugging macro
  *
  * #Example:
- * auto a = 10 + DBG(2 * 3); // prints: [__FILE__:__LINE__] 2 * 3 = 6
+ * auto a = 10 + dbg(2 * 3); // may print: [c:\dev\main.cpp:8] 2 * 3 = 6
  *
  */
-#ifdef NDEBUG
+#if defined(NDEBUG) || !defined(__GNUC__)
 #define dbg(expr) (expr)
 #else
 #define dbg(expr) ({                                 \

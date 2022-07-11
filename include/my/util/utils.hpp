@@ -2,8 +2,8 @@
 #ifndef MY_UTILITY_HPP
 #define MY_UTILITY_HPP
 
-#include <cmath>
-#include <my/util/traits.hpp>
+#include <my/util/defs.hpp>
+#include <my/util/meta.hpp>
 
 namespace my {
 

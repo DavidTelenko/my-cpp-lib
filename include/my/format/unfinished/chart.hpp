@@ -2,9 +2,12 @@
 
 #include <my/format/format.hpp>
 #include <my/format/symbols.hpp>
+#include <my/util/functional.hpp>
 #include <my/util/math.hpp>
 //
+#include <algorithm>
 #include <map>
+#include <ranges>
 
 namespace my {
 
@@ -85,17 +88,26 @@ class Chart {
     }
 
    private:
-    struct MinMaxResult {
-        value_t min = 0, max = 0;
+    struct MinMaxValue {
+        value_t min, max;
     };
 
-    auto _getMinMaxValue() {
-        MinMaxResult result;
-        for (auto&& el : _values) {
-            if (el.second < result.min) result.min = el.second;
-            if (el.second < result.max) result.max = el.second;
-        }
-        return result;
+    MinMaxValue _getMinMaxValue() {
+        const auto tmp =
+            std::ranges::minmax_element(std::views::values(_values));
+
+        return {.min = tmp.min->second,
+                .max = tmp.max->second};
+    }
+
+    static auto _printColumn(sstream_t& ss, size_t height) {
+    }
+
+    template <class T>
+    constexpr static void
+    print_n(ostream_t& os, size_t n, T&& val) {
+        std::ranges::fill_n(std::ostream_iterator<T, Ch, Tr>(os),
+                            n, std::forward<T>(val));
     }
 
    private:

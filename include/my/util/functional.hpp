@@ -1,6 +1,6 @@
 #pragma once
 
-#include <my/util/traits.hpp>
+#include <my/util/meta.hpp>
 //
 #include <functional>
 
@@ -259,16 +259,16 @@ struct compare {
      */
     constexpr explicit compare(BiPredicate f = {},
                                Projection p = {}) noexcept
-        : _func(std::move(f)), _pred(std::move(p)) {
+        : _pred(std::move(f)), _proj(std::move(p)) {
     }
 
     template <class T, class U>
     requires my::invocable_with_projection<BiPredicate, Projection, T, U>
     constexpr bool
     operator()(const T &a, const U &b) const {
-        return std::invoke(_func,
-                           std::invoke(_pred, a),
-                           std::invoke(_pred, b));
+        return std::invoke(_pred,
+                           std::invoke(_proj, a),
+                           std::invoke(_proj, b));
     }
 
     /**
@@ -308,19 +308,19 @@ struct compare {
      */
     template <my::value Proj2>
     constexpr auto thenProject(Proj2 p) const {
-        return then(std::less{}, std::move(p));
+        return then(std::less<void>{}, std::move(p));
     }
 
    private:
-    Pred _func;
-    Proj _pred;
+    Pred _pred;
+    Proj _proj;
 };
 
 /**
  * @brief Constructs less comparator with projection
  *
  */
-template <class Projection = std::identity>
+template <my::value Projection = std::identity>
 constexpr auto compareProject(Projection p = {}) noexcept {
     return compare(std::less<void>{}, std::move(p));
 }
