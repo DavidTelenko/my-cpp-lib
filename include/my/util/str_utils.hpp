@@ -155,6 +155,17 @@ auto &toTitle(String &what) {
     return what;
 }
 
+template <class Ch, class Tr, class Al,
+          class String = std::basic_string<Ch, Tr, Al>>
+constexpr auto truncWithEllipsis(const String &what, size_t maxLength) {
+    if (what.empty()) {
+        return what;
+    }
+    String result(what, 0, maxLength);
+    result.append(3, '.');
+    return result;
+}
+
 template <class Ch = char,
           class Tr = std::char_traits<Ch>,
           class Al = std::allocator<Ch>,

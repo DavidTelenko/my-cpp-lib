@@ -36,7 +36,7 @@ struct Table {
     template <my::printable<ostream_t> Arg,
               my::printable<ostream_t>... Args>
     inline auto& pushRow(Arg&& arg, Args&&... args) {
-        _body.push_back(receiveRow_(std::forward<Arg>(arg),
+        _body.push_back(_receiveRow(std::forward<Arg>(arg),
                                     std::forward<Args>(args)...));
         return *this;
     }
@@ -54,7 +54,7 @@ struct Table {
     template <my::printable<ostream_t> Arg,
               my::printable<ostream_t>... Args>
     inline auto& header(Arg&& arg, Args&&... args) {
-        _header = receiveRow_(std::forward<Arg>(arg),
+        _header = _receiveRow(std::forward<Arg>(arg),
                               std::forward<Args>(args)...);
         return *this;
     }
@@ -72,7 +72,7 @@ struct Table {
     template <my::printable<ostream_t> Arg,
               my::printable<ostream_t>... Args>
     inline auto& footer(Arg&& arg, Args&&... args) {
-        _footer = receiveRow_(std::forward<Arg>(arg),
+        _footer = _receiveRow(std::forward<Arg>(arg),
                               std::forward<Args>(args)...);
         return *this;
     }
@@ -153,9 +153,9 @@ struct Table {
      */
     inline void print(ostream_t& os) const {
         if (_header.empty() and _body.empty() and _footer.empty()) return;
-        printHeader(os);
-        printBody(os);
-        printFooter(os);
+        _printHeader(os);
+        _printBody(os);
+        _printFooter(os);
     }
 
     /**
@@ -166,9 +166,9 @@ struct Table {
      */
     inline void printHTML(ostream_t& os) const {
         if (_header.empty() and _body.empty() and _footer.empty()) return;
-        printHeaderHTML(os);
-        printBodyHTML(os);
-        printFooterHTML(os);
+        _printHeaderHTML(os);
+        _printBodyHTML(os);
+        _printFooterHTML(os);
     }
 
     /**
@@ -200,87 +200,87 @@ struct Table {
    private:
     // ASCII / UTF8 console printers
 
-    inline auto printHeader(ostream_t& os) const {
-        printFrontSeparator(os);
+    inline auto _printHeader(ostream_t& os) const {
+        _printFrontSeparator(os);
 
         if (_header.empty()) return;
 
-        printRowHelper(os, _header);
+        _printRowHelper(os, _header);
         if (not _body.empty() or
             not _footer.empty()) {
-            printSeparator(os);
+            _printSeparator(os);
         }
     }
 
-    auto printBody(ostream_t& os) const {
+    auto _printBody(ostream_t& os) const {
         if (_body.empty()) return;
 
         if (not _separate_each) {
             for (auto&& row : _body) {
-                printRowHelper(os, row);
+                _printRowHelper(os, row);
             }
         } else {
-            printRowHelper(os, _body.front());
+            _printRowHelper(os, _body.front());
             for (auto&& row : _body | std::views::drop(1)) {
-                printSeparator(os);
-                printRowHelper(os, row);
+                _printSeparator(os);
+                _printRowHelper(os, row);
             }
         }
     }
 
-    auto printFooter(ostream_t& os) const {
+    auto _printFooter(ostream_t& os) const {
         if ((_footer_after_lines and _footer_after_lines >= _body.size()) or
             (_footer.empty() and not _same_header_footer)) {
-            printBackSeparator(os);
+            _printBackSeparator(os);
             return;
         }
-        printSeparator(os);
-        printRowHelper(os, _same_header_footer ? _header : _footer);
-        printBackSeparator(os);
+        _printSeparator(os);
+        _printRowHelper(os, _same_header_footer ? _header : _footer);
+        _printBackSeparator(os);
     }
 
-    inline auto printFrontSeparator(ostream_t& os) const {
+    inline auto _printFrontSeparator(ostream_t& os) const {
         assert(not _sizes.empty());
         //                       ─  ╭  ┬  ╮
-        printSeparatorHelper(os, 0, 2, 3, 4);
+        _printSeparatorHelper(os, 0, 2, 3, 4);
     }
 
-    inline auto printSeparator(ostream_t& os) const {
+    inline auto _printSeparator(ostream_t& os) const {
         //                       ─  ├  ┼  ┤
-        printSeparatorHelper(os, 0, 5, 6, 7);
+        _printSeparatorHelper(os, 0, 5, 6, 7);
     }
 
-    inline auto printBackSeparator(ostream_t& os) const {
+    inline auto _printBackSeparator(ostream_t& os) const {
         //                       ─  ╰  ┴  ╯
-        printSeparatorHelper(os, 0, 8, 9, 10);
+        _printSeparatorHelper(os, 0, 8, 9, 10);
     }
 
     // HTML printers
-    auto printHeaderHTML(ostream_t& os) const {
+    auto _printHeaderHTML(ostream_t& os) const {
         os << "<table>";
         if (_header.empty()) return;
 
-        printRowHelperHTML(os, "th", _header);
+        _printRowHelperHTML(os, "th", _header);
     }
 
-    auto printBodyHTML(ostream_t& os) const {
+    auto _printBodyHTML(ostream_t& os) const {
         for (auto&& el : _body) {
-            printRowHelperHTML(os, "td", el);
+            _printRowHelperHTML(os, "td", el);
         }
     }
 
-    auto printFooterHTML(ostream_t& os) const {
+    auto _printFooterHTML(ostream_t& os) const {
         if ((_footer_after_lines and _footer_after_lines >= _body.size()) or
             (_footer.empty() and not _same_header_footer)) {
             os << "</table>";
             return;
         }
-        printRowHelperHTML(os, "th", _same_header_footer ? _header : _footer);
+        _printRowHelperHTML(os, "th", _same_header_footer ? _header : _footer);
         os << "</table>";
     }
 
-    auto printRowHelperHTML(ostream_t& os, const Ch* tag,
-                            const std::vector<string_t>& row) const {
+    auto _printRowHelperHTML(ostream_t& os, const Ch* tag,
+                             const std::vector<string_t>& row) const {
         os << "<tr>";
         for (auto&& el : row) {
             os << "<" << tag << ">" << el << "</" << tag << ">";
@@ -291,7 +291,7 @@ struct Table {
     // helpers
 
     inline auto
-    printRowHelper(ostream_t& os, const std::vector<string_t>& row) const {
+    _printRowHelper(ostream_t& os, const std::vector<string_t>& row) const {
         const auto dash = my::styles[static_cast<size_t>(_style)][1];  // │
 
         for (auto row_iter = begin(row), size_iter = begin(_sizes),
@@ -311,9 +311,9 @@ struct Table {
         os << dash << '\n';
     }
 
-    auto printSeparatorHelper(ostream_t& os,
-                              size_t main, size_t corner1,
-                              size_t inter, size_t corner2) const {
+    auto _printSeparatorHelper(ostream_t& os,
+                               size_t main, size_t corner1,
+                               size_t inter, size_t corner2) const {
         const auto dash =
             my::styles[static_cast<size_t>(_style)][main];
         const auto left_corner =
@@ -335,7 +335,7 @@ struct Table {
     }
 
     template <std::input_iterator It>
-    auto readRow_(It begin, It end) {
+    auto _readRow(It begin, It end) {
         const size_t size = std::distance(begin, end);
 
         assert(size);
@@ -364,7 +364,7 @@ struct Table {
     template <class It,
               my::representable<ostream_t> Arg,
               my::representable<ostream_t>... Args>
-    auto readVariadicRowImpl_(std::vector<string_t>& row, It size_iter,
+    auto _readVariadicRowImpl(std::vector<string_t>& row, It size_iter,
                               Arg&& arg, Args&&... args) {
         const auto value = my::represent.get<Ch, Tr>(arg);
         const size_t value_size = value.size();
@@ -378,13 +378,13 @@ struct Table {
         if constexpr (sizeof...(args) == 0) {
             return;
         } else {
-            readVariadicRowImpl_(row, size_iter + 1,
+            _readVariadicRowImpl(row, size_iter + 1,
                                  std::forward<Args>(args)...);
         }
     }
 
     template <my::representable<ostream_t>... Args>
-    auto readVariadicRow_(Args&&... args) {
+    auto _readVariadicRow(Args&&... args) {
         constexpr size_t size = sizeof...(args);
 
         if (_sizes.empty()) _sizes.resize(size);
@@ -395,19 +395,19 @@ struct Table {
 
         auto size_iter = _sizes.begin();
 
-        readVariadicRowImpl_(row, size_iter, std::forward<Args>(args)...);
+        _readVariadicRowImpl(row, size_iter, std::forward<Args>(args)...);
 
         return row;
     }
 
     template <my::representable<ostream_t> Arg,
               my::representable<ostream_t>... Args>
-    inline auto receiveRow_(Arg&& arg, Args&&... args) {
+    inline auto _receiveRow(Arg&& arg, Args&&... args) {
         if constexpr (sizeof...(args) == 0 and std::ranges::range<Arg>) {
-            return readRow_(std::ranges::begin(std::forward<Arg>(arg)),
+            return _readRow(std::ranges::begin(std::forward<Arg>(arg)),
                             std::ranges::end(std::forward<Arg>(arg)));
         } else {
-            return readVariadicRow_(std::forward<Arg>(arg),
+            return _readVariadicRow(std::forward<Arg>(arg),
                                     std::forward<Args>(args)...);
         }
     }
@@ -445,7 +445,7 @@ auto _tableIterable(const T& iterable) {
     return t;
 }
 
-template <my::associative_container T>
+template <std::ranges::range T>
 auto _tableMap(const T& map) {
     Table t;
     t.reserve(std::ranges::size(map));
@@ -485,7 +485,7 @@ auto _tableObjects(const T& objects, Projections... proj) {
  */
 template <std::ranges::range T>
 constexpr auto table(const T& val) {
-    if constexpr (my::is_associative_container_v<T>) {
+    if constexpr (my::pair_like<std::ranges::range_value_t<T>>) {
         return detail::_tableMap(val);
     } else {
         return detail::_tableIterable(val);
