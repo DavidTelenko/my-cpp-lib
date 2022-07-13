@@ -84,6 +84,23 @@ class NonMovable {
     ~NonMovable() = default;
 };
 
+template <class Char, size_t N>
+class basic_fixed_string {
+   public:
+    constexpr basic_fixed_string(const Char (&literal)[N + 1])
+        : _literal(consteval_assert(literal[N] == '\n'), literal) {}
+
+   private:
+    const Char (&_literal)[N + 1];
+};
+
+template <class Char, size_t N>
+basic_fixed_string(const Char (&literal)[N])
+    -> basic_fixed_string<Char, N - 1>;
+
+template <size_t N>
+using fixed_string = basic_fixed_string<char, N>;
+
 }  // namespace my
 
 #define finally(f) \

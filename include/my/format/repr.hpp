@@ -1,6 +1,7 @@
 #pragma once
 
 #include <my/util/meta.hpp>
+#include <my/util/utils.hpp>
 //
 #include <iomanip>
 #include <iostream>
@@ -312,6 +313,35 @@ using PrettyTupleRepresenter = TupleRepresenter<PrettyRepresenter>;
 constexpr PrettyTupleRepresenter _tuplePrettyRepresent;
 constexpr PrettyRangeRepresenter _rangeOfValuesPrettyRepresent;
 constexpr PrettyRangeRepresenter _rangeOfRangesOrTuplesRepresent(",\n");
+
+/**
+ * @brief Returns zero based index of nest level of a range
+ *
+ * @note base of the index is defined by parameter `level`
+ * in particular it's default parameter yields zero based index
+ *
+ * @tparam Range std::ranges::range concept
+ * @param level initial level of nesting, defaults to 0
+ * @return size_t index of nesting level
+ */
+template <std::ranges::range Range>
+consteval auto _nestingLevel(const size_t level = 0) noexcept {
+    using value_t = std::ranges::range_value_t<Range>;
+
+    if constexpr (std::ranges::range<value_t>) {
+        return nestingLevel<value_t>(level + 1);
+    } else {
+        return level;
+    }
+}
+
+// template <std::ranges::range Range>
+// consteval auto _rangeOfRangesOrTuplesRepresent() {
+//     constexpr auto level = _nestingLevel<Range>();
+//     constexpr std::string_view delim = ",\n";
+// }
+
+// constexpr auto
 
 template <class Ch, class Tr, representable<std::basic_ostream<Ch, Tr>> T>
 constexpr void _prettyRepresent(std::basic_ostream<Ch, Tr>& os,

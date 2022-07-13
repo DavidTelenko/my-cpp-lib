@@ -31,7 +31,7 @@ class cached<Res(Args...)> {
         : _func(std::move(func)), _limit(cacheLimit) {
     }
 
-    Res operator()(Args... args) const {
+    constexpr Res operator()(Args... args) const {
         const auto hash = hashArgs(args...);
 
         if constexpr (not std::same_as<Res, void>) {
@@ -85,7 +85,7 @@ class once<Res(Args...)> {
         : _func(std::move(func)) {
     }
 
-    Res operator()(Args... args) const {
+    constexpr Res operator()(Args... args) const {
         if constexpr (not std::same_as<Res, void>) {
             static std::optional<Res> value;
             if (not value) value = _func(args...);
@@ -96,6 +96,7 @@ class once<Res(Args...)> {
                 _func(args...);
                 called = true;
             }
+            return;
         }
     }
 
