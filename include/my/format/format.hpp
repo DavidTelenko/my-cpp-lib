@@ -1,6 +1,6 @@
 #pragma once
 
-#include <my/format/repr.hpp>
+#include <my/util/meta.hpp>
 //
 #include <array>
 #include <cstring>
@@ -22,8 +22,8 @@ _printf(std::basic_ostream<Ch, Tr>& os, const Ch* format) {
 }
 
 template <class Ch, class Tr,
-          my::representable<std::basic_ostream<Ch, Tr>> Arg,
-          my::representable<std::basic_ostream<Ch, Tr>>... Args>
+          my::printable<std::basic_ostream<Ch, Tr>> Arg,
+          my::printable<std::basic_ostream<Ch, Tr>>... Args>
 constexpr void
 _printf(std::basic_ostream<Ch, Tr>& os,
         const Ch* format, Arg&& arg, Args&&... args) {
@@ -33,9 +33,8 @@ _printf(std::basic_ostream<Ch, Tr>& os,
                 os << '{';
                 continue;
             }
-            my::represent(os, arg);
-            return detail::_printf(os, (format + 2),
-                                   std::forward<Args>(args)...);
+            os << arg;
+            return _printf(os, (format + 2), std::forward<Args>(args)...);
         }
         os << *format;
     }
@@ -50,10 +49,10 @@ _printf(std::basic_ostream<Ch, Tr>& os,
  * @tparam Args
  * @param os std::ostream where to print data
  * @param format format c_str where '{}' is a replace anchor
- * @param args any representable types
+ * @param args any printable types
  */
 template <class Ch, class Tr,
-          my::representable<std::basic_ostream<Ch, Tr>>... Args>
+          my::printable<std::basic_ostream<Ch, Tr>>... Args>
 constexpr void
 printf(std::basic_ostream<Ch, Tr>& os,
        const Ch* format, Args&&... args) {
@@ -65,9 +64,9 @@ printf(std::basic_ostream<Ch, Tr>& os,
  * Replaces each next '{}' occurance with next argument
  *
  * @param format format c_str where '{}' is a replace anchor
- * @param args any representable types
+ * @param args any printable types
  */
-template <class Ch, my::representable<std::basic_ostream<Ch>>... Args>
+template <class Ch, my::printable<std::basic_ostream<Ch>>... Args>
 constexpr void
 printf(const Ch* format, Args&&... args) {
     if constexpr (std::same_as<Ch, wchar_t>) {
@@ -87,7 +86,7 @@ printf(const Ch* format, Args&&... args) {
  * @return std::string new object with printed ouput
  */
 template <class Ch,
-          my::representable<std::basic_ostream<Ch>>... Args>
+          my::printable<std::basic_ostream<Ch>>... Args>
 [[nodiscard]] inline auto
 format(const Ch* format, Args&&... args) {
     std::basic_stringstream<Ch> ss;

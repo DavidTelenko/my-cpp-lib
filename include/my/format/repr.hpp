@@ -52,17 +52,19 @@ class _RepresentableValueView {
     const T& _value;
 };
 
+}  // namespace detail
+
 template <class Representer>
-struct _BaseRepresenter {
+struct BaseRepresenter {
     template <class Ch, class Tr, class T>
     constexpr void print(std::basic_ostream<Ch, Tr>& os,
                          const T& value) const {
-        (static_cast<const Representer&>(*this))(os, value);
+        _derived()(os, value);
     }
 
     template <class T>
     constexpr void print(const T& value) const {
-        (static_cast<const Representer&>(*this))(std::cout, value);
+        print(std::cout, value);
     }
 
     template <class Ch, class Tr, class T>
@@ -76,10 +78,37 @@ struct _BaseRepresenter {
         println(std::cout, value);
     }
 
+    template <class Ch, class Tr>
+    constexpr void printf(std::basic_ostream<Ch, Tr>& os,
+                          const Ch* format) const {
+        os << *format;
+    }
+
+    template <class Ch, class Tr, class Arg, class... Args>
+    constexpr void printf(std::basic_ostream<Ch, Tr>& os, const Ch* format,
+                          Arg&& arg, Args&&... args) const {
+        for (; *format != '\0'; ++format) {
+            if (*format == '{') {
+                if (*(format + 1) != '}') {
+                    os << '{';
+                    continue;
+                }
+                print(os, arg);
+                return printf(os, (format + 2), std::forward<Args>(args)...);
+            }
+            os << *format;
+        }
+    }
+
+    template <class Ch, class... Args>
+    constexpr void printf(const Ch* format, Args&&... args) const {
+        printf(std::cout, format, std::forward<Args>(args)...);
+    }
+
     template <class Ch, class Tr, class T>
     constexpr auto get(const T& value) const {
         std::basic_stringstream<Ch, Tr> ss;
-        (static_cast<const Representer&>(*this))(ss, value);
+        print(ss, value);
         return ss.str();
     }
 
@@ -90,15 +119,17 @@ struct _BaseRepresenter {
 
     template <class T>
     constexpr auto view(const T& value) const {
-        return detail::_RepresentableValueView(
-            static_cast<const Representer&>(*this), value);
+        return detail::_RepresentableValueView(_derived(), value);
+    }
+
+   private:
+    constexpr const auto& _derived() const noexcept {
+        return static_cast<const Representer&>(*this);
     }
 };
 
-}  // namespace detail
-
 struct DefaultRepresenter
-    : public detail::_BaseRepresenter<DefaultRepresenter> {
+    : public BaseRepresenter<DefaultRepresenter> {
     template <class Ch, class Tr, class T>
     constexpr void operator()(std::basic_ostream<Ch, Tr>& os,
                               const T& value) const {
@@ -107,7 +138,7 @@ struct DefaultRepresenter
 };
 
 struct PrettyRepresenter
-    : public detail::_BaseRepresenter<PrettyRepresenter> {
+    : public BaseRepresenter<PrettyRepresenter> {
     template <class Ch, class Tr, class T>
     constexpr void operator()(std::basic_ostream<Ch, Tr>& os,
                               const T& value) const {
@@ -117,7 +148,7 @@ struct PrettyRepresenter
 
 template <class Representer = DefaultRepresenter>
 struct RangeRepresenter
-    : public detail::_BaseRepresenter<RangeRepresenter<Representer>> {
+    : public BaseRepresenter<RangeRepresenter<Representer>> {
    public:
     constexpr explicit RangeRepresenter(std::string_view delim = ", ",
                                         Representer representer = {})
@@ -156,18 +187,23 @@ struct RangeRepresenter
                std::iter_difference_t<Iter> lastLength = 0) const {
         const auto size = std::ranges::distance(first, last);
 
-        if (size <= maxLength) {
+        if (size <= maxLength or size == maxLength + lastLength) {
             (*this)(os, first, last);
             return;
         }
 
-        (*this)(os, first, first + maxLength);
+        (*this)(os, first, std::ranges::next(first, maxLength));
         os << _delim << "...";
 
-        if (!lastLength) return;
+        if (!lastLength) {
+            os << "(" << size - maxLength << ")";
+            return;
+        }
 
         if (size >= maxLength + lastLength) {
-            os << _delim, (*this)(os, last - lastLength, last);
+            os << "(" << size - maxLength - lastLength << ")";
+            os << _delim;
+            (*this)(os, std::ranges::prev(last, lastLength), last);
         }
     }
 
@@ -190,7 +226,7 @@ constexpr RangeRepresenter<DefaultRepresenter> rangeRepresent;
 
 template <class Representer = DefaultRepresenter>
 struct TupleRepresenter
-    : public detail::_BaseRepresenter<TupleRepresenter<Representer>> {
+    : public BaseRepresenter<TupleRepresenter<Representer>> {
    public:
     constexpr explicit TupleRepresenter(std::string_view delim = ", ",
                                         Representer representer = {})
@@ -220,6 +256,22 @@ template <class T = DefaultRepresenter>
 using PairRepresenter = TupleRepresenter<T>;
 
 constexpr PairRepresenter<DefaultRepresenter> pairRepresent;
+
+struct PrettyOptions {
+    static size_t rangeMaxLength;
+    static size_t rangeMaxLengthFromEnd;
+    static const char* rangeOpenDelim;
+    static const char* rangeCloseDelim;
+    static const char* tupleOpenDelim;
+    static const char* tupleCloseDelim;
+};
+
+size_t PrettyOptions::rangeMaxLength = 5;
+size_t PrettyOptions::rangeMaxLengthFromEnd = 5;
+const char* PrettyOptions::rangeOpenDelim = "[";
+const char* PrettyOptions::rangeCloseDelim = "]";
+const char* PrettyOptions::tupleOpenDelim = "(";
+const char* PrettyOptions::tupleCloseDelim = ")";
 
 namespace detail {
 
@@ -268,15 +320,23 @@ constexpr void _prettyRepresent(std::basic_ostream<Ch, Tr>& os,
         _quotedIfPossible(os, value);
     } else if constexpr (std::ranges::range<T>) {
         using value_t = std::ranges::range_value_t<T>;
-        os << '[';
+        os << PrettyOptions::rangeOpenDelim;
         if constexpr (std::ranges::range<value_t> or my::tuple_like<value_t>) {
-            _rangeOfRangesOrTuplesRepresent(os, value, 5, 5);
+            _rangeOfRangesOrTuplesRepresent(
+                os, value,
+                PrettyOptions::rangeMaxLength,
+                PrettyOptions::rangeMaxLengthFromEnd);
         } else {
-            _rangeOfValuesPrettyRepresent(os, value, 5, 5);  // maybe print amount between
+            _rangeOfValuesPrettyRepresent(
+                os, value,
+                PrettyOptions::rangeMaxLength,
+                PrettyOptions::rangeMaxLengthFromEnd);
         }
-        os << ']';
+        os << PrettyOptions::rangeCloseDelim;
     } else if constexpr (my::tuple_like<T>) {
-        os << '(', _tuplePrettyRepresent(os, value), os << ')';
+        os << PrettyOptions::tupleOpenDelim;
+        _tuplePrettyRepresent(os, value);
+        os << PrettyOptions::tupleOpenDelim;
     } else if constexpr (std::input_or_output_iterator<T>) {
         _prettyRepresent(os, *value);
     }
