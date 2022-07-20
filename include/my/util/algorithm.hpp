@@ -311,4 +311,25 @@ reduce(Container &&container, Accum accum, NaryFunction f,
                       std::ranges::cbegin(rest)...);
 }
 
+template <class T>
+concept erase_callable_range = std::ranges::range<T> and requires(
+    std::remove_reference_t<T> &val, std::ranges::range_iterator_t<T> iter) {
+    { val.erase(iter) } -> std::same_as<std::ranges::range_iterator_t<T>>;
+};
+
+/**
+ * @brief Broader erase_if implementation in contrary to
+ *  std::erase_if (which works only on std::vector)
+ *
+ * @tparam Range erase_callable_range
+ * @tparam Pred see remove_if requirements
+ * @param range range to erase elements from
+ * @param predicate predicate for values to clear
+ * @return constexpr auto iterator to last element in range
+ */
+template <detail::erase_callable_range Range, class Pred>
+constexpr auto eraseIf(Range &range, Pred predicate) {
+    return range.erase(std::ranges::remove_if(range, predicate).begin());
+}
+
 }  // namespace my
