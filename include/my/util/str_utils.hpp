@@ -11,8 +11,7 @@
 
 namespace my {
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 inline std::vector<String> split(const String &what,
                                  const String &delim) {
     std::vector<String> result;
@@ -29,16 +28,14 @@ inline std::vector<String> split(const String &what,
     return result;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 auto &replaceFirst(String &where, const String &from, const String &to) {
     if (auto pos = where.find(from); pos != String::npos)
         where.replace(pos, from.length(), to);
     return where;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 auto &replaceAll(String &where,
                  const String &from, const String &to) {
     typename String::size_type pos = 0;
@@ -50,8 +47,7 @@ auto &replaceAll(String &where,
     return where;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 String repeat(const String &what, size_t n) {
     if (!n) return String{};
     if (n == 1) return what;
@@ -63,8 +59,7 @@ String repeat(const String &what, size_t n) {
     return result;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 auto &padStart(String &what, size_t targetLen,
                typename String::value_type padding) {
     what.reserve(targetLen);
@@ -73,8 +68,7 @@ auto &padStart(String &what, size_t targetLen,
                : what;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 auto &padEnd(String &what, size_t targetLen,
              typename String::value_type padding) {
     what.reserve(targetLen);
@@ -83,8 +77,7 @@ auto &padEnd(String &what, size_t targetLen,
                : what;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 auto &pad(String &what, size_t targetLen,
           typename String::value_type padding) {
     if (targetLen <= what.size()) return what;
@@ -99,8 +92,7 @@ auto &pad(String &what, size_t targetLen,
     return what;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 auto &trimStart(String &what, typename String::value_type remove = ' ') {
     what.erase(what.begin(),
                std::find_if(what.begin(), what.end(),
@@ -110,8 +102,7 @@ auto &trimStart(String &what, typename String::value_type remove = ' ') {
     return what;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 auto &trimEnd(String &what, typename String::value_type remove = ' ') {
     what.erase(std::find_if(what.rbegin(), what.rend(),
                             [remove](auto ch) {
@@ -122,30 +113,26 @@ auto &trimEnd(String &what, typename String::value_type remove = ' ') {
     return what;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 auto &trim(String &what, typename String::value_type remove = ' ') {
     return trimEnd(trimStart(what, remove), remove);
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 auto &toUpper(String &what) {
     std::transform(what.begin(), what.end(), what.begin(),
                    [](auto ch) { return std::toupper(ch); });
     return what;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 auto &toLower(String &what) {
     std::transform(what.begin(), what.end(), what.begin(),
                    [](auto ch) { return std::tolower(ch); });
     return what;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 auto &toTitle(String &what) {
     bool up = true;
     for (auto &el : what) {
@@ -155,14 +142,13 @@ auto &toTitle(String &what) {
     return what;
 }
 
-template <class Ch, class Tr, class Al,
-          class String = std::basic_string<Ch, Tr, Al>>
+template <class String>
 constexpr auto truncWithEllipsis(const String &what, size_t maxLength) {
-    if (what.empty()) {
-        return what;
-    }
+    if (what.empty()) return what;
+
     String result(what, 0, maxLength);
     result.append(3, '.');
+
     return result;
 }
 
@@ -190,7 +176,8 @@ auto strLength(T &&obj) { return my::toString(std::forward<T>(obj)).size(); }
  * @return size_t value representing Levenshtein distance between two strings
  */
 template <std::ranges::range String>
-size_t levDistance(const String &lhs, const String &rhs) {
+requires std::ranges::sized_range<String>
+    size_t levDistance(const String &lhs, const String &rhs) {
     const size_t m = lhs.size();
     const size_t n = rhs.size();
 
@@ -233,7 +220,7 @@ inline constexpr std::optional<Number> parse(std::string_view str) {
     std::istringstream ss(str.data());
     Number result;
     ss >> std::boolalpha >> result;
-    return ss.fail() ? std::nullopt : result;
+    return ss.fail() ? std::nullopt : std::optional<Number>(result);
 }
 
 template <typename Ch, typename Tr, typename Al, class Predicate>
