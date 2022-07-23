@@ -387,7 +387,7 @@ constexpr void _prettyRepresent(std::basic_ostream<Ch, Tr>& os,
     } else if constexpr (my::tuple_like<T>) {
         os << PrettyOptions::tupleOpenDelim;
         _tuplePrettyRepresent(os, value);
-        os << PrettyOptions::tupleOpenDelim;
+        os << PrettyOptions::tupleCloseDelim;
     } else if constexpr (std::input_or_output_iterator<T>) {
         _prettyRepresent(os, *value);
     }
