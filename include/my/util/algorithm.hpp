@@ -1,7 +1,7 @@
 #pragma once
 
+#include <my/util/concepts.hpp>
 #include <my/util/functional.hpp>
-#include <my/util/meta.hpp>
 //
 #include <cassert>
 #include <ranges>
@@ -111,6 +111,7 @@ template <class NaryFunction, std::ranges::range Container,
 constexpr NaryFunction
 forEach(Container &container, NaryFunction f,
         Containers &...rest) {
+    assert(((std::ranges::size(rest) >= std::ranges::size(container)) and ...));
     return my::forEach(std::ranges::begin(container),
                        std::ranges::end(container),
                        std::move(f),
@@ -133,6 +134,7 @@ template <class NaryFunction, std::ranges::range Container,
 constexpr NaryFunction
 forEach(NaryFunction f, const Container &container,
         const Containers &...rest) {
+    assert(((std::ranges::size(rest) >= std::ranges::size(container)) and ...));
     return my::forEach(std::ranges::cbegin(container),
                        std::ranges::cend(container),
                        std::move(f),
@@ -157,6 +159,7 @@ constexpr Out
 transform(const Container &container, Out result,
           NaryOperator f,
           const Containers &...rest) {
+    assert(((std::ranges::size(rest) >= std::ranges::size(container)) and ...));
     return my::transform(std::ranges::begin(container),
                          std::ranges::end(container),
                          std::move(result),
@@ -311,25 +314,36 @@ reduce(Container &&container, Accum accum, NaryFunction f,
                       std::ranges::cbegin(rest)...);
 }
 
-template <class T>
-concept erase_callable_range = std::ranges::range<T> and requires(
-    std::remove_reference_t<T> &val, std::ranges::iterator_t<T> iter) {
-    { val.erase(iter) } -> std::same_as<std::ranges::iterator_t<T>>;
-};
-
 /**
  * @brief Broader erase_if implementation in contrary to
  *  std::erase_if (which works only on std::vector)
  *
- * @tparam Range erase_callable_range
+ * @tparam Range erasable_range
  * @tparam Pred see remove_if requirements
  * @param range range to erase elements from
  * @param predicate predicate for values to clear
  * @return constexpr auto iterator to last element in range
  */
-template <erase_callable_range Range, class Pred>
-constexpr auto eraseIf(Range &range, Pred predicate) {
+template <erasable_range Range, 
+          std::predicate<std::ranges::range_value_t<Range>> Pred>
+constexpr auto erase_if(Range &range, Pred predicate) {
     return range.erase(std::ranges::remove_if(range, predicate).begin());
+}
+
+/**
+ * @brief Broader erase implementation in contrary to
+ *  std::erase (which works only on std::vector)
+ * 
+ * @tparam Range erasable_range
+ * @tparam T see std::remove requirements
+ * @param range range to erase elements from
+ * @param predicate predicate for values to clear
+ * @return constexpr auto iterator to last element in range 
+ */
+template <erasable_range Range, 
+          std::convertible_to<std::ranges::range_value_t<Range>> T>
+constexpr auto erase(Range &range, const T& value) {
+    return range.erase(std::ranges::remove(range, value).begin());
 }
 
 }  // namespace my

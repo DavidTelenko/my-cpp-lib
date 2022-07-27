@@ -57,9 +57,17 @@ concept associative_container = requires(T val) {
     typename T::value_type;
 };
 
-template <class T, class SizeT = typename T::size_type>
-concept reservable = requires(std::remove_reference_t<T>& obj, SizeT size) {
+template <class T>
+concept reservable_range = std::ranges::sized_range<T> and 
+requires(std::remove_reference_t<T>& obj, 
+         decltype(std::ranges::size(obj)) size) {
     obj.reserve(size);
+};
+
+template <class T>
+concept erasable_range = std::ranges::range<T> and requires(
+    std::remove_reference_t<T> &val, std::ranges::iterator_t<T> iter) {
+    { val.erase(iter) } -> std::same_as<std::ranges::iterator_t<T>>;
 };
 
 template <class T>

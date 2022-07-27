@@ -1,6 +1,7 @@
 #pragma once
 
-#include <my/util/meta.hpp>
+#include <my/util/concepts.hpp>
+#include <my/util/functional.hpp>
 #include <my/util/utils.hpp>
 //
 #include <iomanip>
@@ -9,10 +10,11 @@
 #include <ranges>
 #include <sstream>
 #include <string>
+#include <variant>
 
 namespace my {
 
-template <class T, class Ostream,
+template <class T, class Ostream = std::ostream,
           class R = std::remove_reference_t<T>>
 concept representable =
     my::printable<R, Ostream> or
@@ -391,6 +393,9 @@ constexpr void _prettyRepresent(std::basic_ostream<Ch, Tr>& os,
     } else if constexpr (std::input_or_output_iterator<T>) {
         _prettyRepresent(os, *value);
     }
+    //  else if constexpr (my::variant_like<T>) {
+    //     _prettyRepresent(os, std::get<value.index()>());
+    // }
 }
 
 }  // namespace detail

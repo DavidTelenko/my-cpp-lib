@@ -1,6 +1,6 @@
 #pragma once
 
-#include <my/util/meta.hpp>
+#include <my/util/concepts.hpp>
 //
 #include <functional>
 
@@ -155,17 +155,49 @@ struct negate {
 
    public:
     constexpr explicit negate(Predicate predicate)
-        : predicate_(std::move(predicate)) {
+        : _predicate(std::move(predicate)) {
     }
 
     template <class... Args>
-    requires std::invocable<Predicate, Args...>
+    requires std::predicate<Predicate, Args...>
     constexpr bool operator()(Args &&...args) const noexcept {
-        return not std::invoke(predicate_, std::forward<Args>(args)...);
+        return not std::invoke(_predicate, std::forward<Args>(args)...);
     }
 
    private:
-    Pred predicate_;
+    Pred _predicate;
+};
+
+template <my::value PredicateA,
+          my::value PredicateB,
+          my::value Composer>
+struct compose {
+   private:
+    using PredA = my::make_member_function_t<PredicateA>;
+    using PredB = my::make_member_function_t<PredicateB>;
+    using Comp = my::make_member_function_t<Composer>;
+
+   public:
+    constexpr explicit compose(PredicateA lhs,
+                               PredicateB rhs,
+                               Composer comp)
+        : _lhs(std::move(lhs)),
+          _rhs(std::move(rhs)),
+          _comp(std::move(comp)) {
+    }
+
+    template <class... Args>
+    requires std::predicate<PredicateA, Args...> and
+        std::predicate<PredicateB, Args...>
+    constexpr bool operator()(Args &&...args) const noexcept {
+        return _comp(std::invoke(_lhs, args...),
+                     std::invoke(_rhs, args...));
+    }
+
+   private:
+    PredA _lhs;
+    PredB _rhs;
+    Comp _comp;
 };
 
 template <class F, class P, class... Args>

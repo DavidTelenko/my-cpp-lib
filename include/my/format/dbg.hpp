@@ -12,10 +12,10 @@
 #if defined(NDEBUG) || !defined(__GNUC__)
 #define dbg(expr) (expr)
 #else
-#define dbg(expr) ({                                 \
+#define dbg(expr) ([]() {                            \
     const auto _dbg_tmp = (expr);                    \
     my::printf(std::cerr, "[{}:{}] {} = {}\n",       \
                __FILE__, __LINE__, #expr, _dbg_tmp); \
-    _dbg_tmp;                                        \
-})
+    return _dbg_tmp;                                 \
+}())
 #endif

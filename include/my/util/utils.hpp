@@ -2,8 +2,8 @@
 #ifndef MY_UTILITY_HPP
 #define MY_UTILITY_HPP
 
+#include <my/util/concepts.hpp>
 #include <my/util/defs.hpp>
-#include <my/util/meta.hpp>
 
 namespace my {
 
@@ -84,22 +84,22 @@ class NonMovable {
     ~NonMovable() = default;
 };
 
-template <class Char, size_t N>
-class basic_fixed_string {
-   public:
-    constexpr basic_fixed_string(const Char (&literal)[N + 1])
-        : _literal(consteval_assert(literal[N] == '\n'), literal) {}
+// template <class Char, size_t N>
+// class basic_fixed_string {
+//    public:
+//     constexpr basic_fixed_string(const Char (&literal)[N + 1])
+//         : _literal(consteval_assert(literal[N] == '\n'), literal) {}
 
-   private:
-    const Char (&_literal)[N + 1];
-};
+//    private:
+//     const Char (&_literal)[N + 1];
+// };
 
-template <class Char, size_t N>
-basic_fixed_string(const Char (&literal)[N])
-    -> basic_fixed_string<Char, N - 1>;
+// template <class Char, size_t N>
+// basic_fixed_string(const Char (&literal)[N])
+//     -> basic_fixed_string<Char, N - 1>;
 
-template <size_t N>
-using fixed_string = basic_fixed_string<char, N>;
+// template <size_t N>
+// using fixed_string = basic_fixed_string<char, N>;
 
 }  // namespace my
 

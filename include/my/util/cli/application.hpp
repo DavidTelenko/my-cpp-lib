@@ -1,9 +1,12 @@
 #pragma once
 
+#include <my/format/dbg.hpp>
+#include <my/format/repr.hpp>
 #include <my/util/cli/status.hpp>
 #include <my/util/str_utils.hpp>
 //
 #include <any>
+#include <cassert>
 #include <functional>
 #include <ranges>
 #include <string>
@@ -68,6 +71,8 @@ class Application {
      */
     struct Constraints {
         static auto makeArgsAmountConstraint(size_t min, size_t max) {
+            assert(max > min);
+
             return [min, max](const auto& args) -> Status {
                 const auto emptyStatus = _checkNotEmptyArgs(args);
                 if (not emptyStatus) return emptyStatus;
@@ -146,26 +151,34 @@ class Application {
             my::printf(std::cerr, "Error: {}\n", *status);
         }
 
-        static auto parse(std::string input) {
-            my::trim(input);
+        static auto parse(const std::string& input) {
             ArgList tokens;
 
             bool quote = false;
-            size_t last = 0;
             size_t next = 0;
+
+            for (; next < input.size(); ++next) {
+                if (!std::isspace(input[next])) break;
+            }
+
+            size_t last = next;
 
             for (; next < input.size(); ++next) {
                 const char el = input[next];
                 if (el == '"') quote = !quote;
+
                 if (!quote and el == ' ') {
-                    tokens.push_back(input.substr(last, next - last));
+                    if (last < next) {
+                        tokens.push_back(input.substr(last, next - last));
+                    }
                     last = next + 1;
                 }
             }
-            tokens.push_back(input.substr(last));
+            if (last < input.size()) {
+                tokens.push_back(input.substr(last));
+            }
 
-            std::erase_if(tokens, [](auto e) { return e.empty(); });
-            for (auto& token : tokens) my::trim(token, '"');
+            my::pretty.printf("tokens: {}\n", tokens);
 
             return tokens;
         }
@@ -301,7 +314,7 @@ class Application {
         std::unordered_map<size_t, Behaviour> _constraints{};  // multiple constraints
         std::string _description = "no description";
         std::vector<Argument> _args{};
-        std::string _name;
+        std::string _name = "";
     };
 
     struct Commands {
@@ -354,7 +367,8 @@ class Application {
                     if (command == commands.end()) {
                         return Status(
                             Status::Code::ArgumentValueMismatch,
-                            "No such command \"{}\"", str(args[1]));
+                            "Cannot provide help for: \"{}\" no such command",
+                            str(args[1]));
                     }
 
                     print(command->first, command->second);
@@ -378,28 +392,47 @@ class Application {
     };
 
     Command& record(const std::string& name) {
+        _alias[name] = name;
         return _commands[name];
     }
 
     Command& record(std::initializer_list<std::string> names) {
-        _names[*names.begin()] = names;
-        return _commands[*names.begin()];
+        assert(names.size());
+
+        const auto primary = *names.begin();
+
+        auto commandIterator = _commands.find(primary);
+
+        if (commandIterator == _commands.end()) {
+            auto insertionResult =
+                _commands.insert_or_assign(primary, Command{});
+
+            assert(insertionResult.second);
+            commandIterator = insertionResult.first;
+        }
+
+        for (auto&& name : names) {
+            _alias[name] = primary;
+        }
+
+        return commandIterator->second;
     }
 
     auto& constrainAll(std::initializer_list<std::string> names,
                        Behaviour behaviour) {
         for (auto&& name : names) {
-            auto it = _commands.find(name);
-            if (it != _commands.end()) {
-                it->second.constrain(behaviour);
-            }
+            auto aliasIterator = _alias.find(name);
+            assert(aliasIterator != _alias.end());
+
+            auto commandIterator = _commands.find(aliasIterator->second);
+            assert(commandIterator != _commands.end());
+
+            commandIterator->second.constrain(behaviour);
         }
         return *this;
     }
 
-    const auto& commands() const {
-        return _commands;
-    }
+    const auto& commands() const { return _commands; }
 
     auto remove(const std::string& name) {
         return _commands.erase(name);
@@ -408,15 +441,16 @@ class Application {
     Status invoke(const ArgList& args) {
         const auto& name = args.front();
 
-        // TODO proccess alias
-
-        auto command = _commands.find(name);
-        if (command == _commands.end()) {
+        auto aliasIterator = _alias.find(name);
+        if (aliasIterator == _alias.end()) {
             return Status(Status::Code::NoSuchCommand,
                           "No such command: \"{}\"", name);
         }
 
-        return command->second.invoke(args);
+        auto commandIterator = _commands.find(aliasIterator->second);
+        assert(commandIterator != _commands.end());  // unexpected
+
+        return commandIterator->second.invoke(args);
     }
 
     template <class Parser, class InputHandle,
@@ -445,8 +479,12 @@ class Application {
     bool running() const { return _running; }
 
    private:
-    std::unordered_map<std::string, std::vector<std::string>> _names;
-    std::unordered_map<std::string, Command> _commands{};
+    using CommandsMap = std::unordered_map<std::string, Command>;
+    using AliasMap = std::unordered_map<std::string, std::string>;
+
+    CommandsMap _commands{};
+    AliasMap _alias{};
+
     bool _running = false;
 };
 
