@@ -3,9 +3,7 @@
 #include <my/format/color.hpp>
 #include <my/util/str_utils.hpp>
 
-namespace my {
-
-namespace fmt {
+namespace my::experimental {
 
 class ColorParser {
     inline static const std::map<std::string, my::Color> colors{
@@ -210,7 +208,5 @@ auto formatcol(const char* format, Args&&... args) {
     my::printcol(ss, format, args...);
     return ss.str();
 }
-
-}  // namespace fmt
 
 }  // namespace my
