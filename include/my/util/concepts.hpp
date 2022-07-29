@@ -45,8 +45,8 @@ concept pair_like =
     requires std::derived_from<
         std::tuple_size<T>,
         std::integral_constant<std::size_t, 2>>;
-    has_tuple_element<T, 0>;
-    has_tuple_element<T, 1>;
+    requires has_tuple_element<T, 0>;
+    requires has_tuple_element<T, 1>;
 };
 
 // TODO follow https://en.cppreference.com/w/cpp/named_req/AssociativeContainer
@@ -105,9 +105,8 @@ struct function_traits<R(Args...)> {
 
     static constexpr std::size_t arity = sizeof...(Args);
 
-    template <std::size_t N>
+    template <std::size_t N> requires (N < arity)
     struct argument {
-        static_assert(N < arity, "error: invalid parameter index.");
         using type = typename std::tuple_element<N, std::tuple<Args...>>::type;
     };
 };
@@ -134,9 +133,8 @@ struct function_traits {
 
     static constexpr std::size_t arity = call_type::arity - 1;
 
-    template <std::size_t N>
+    template <std::size_t N> requires (N < arity)
     struct argument {
-        static_assert(N < arity, "error: invalid parameter index.");
         using type = typename call_type::template argument<N + 1>::type;
     };
 };

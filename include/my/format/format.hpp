@@ -17,26 +17,18 @@ namespace detail {
 
 template <class Ch, class Tr>
 [[maybe_unused]] constexpr void
-_printf(std::basic_ostream<Ch, Tr>& os, const Ch* format) {
-    os << format;
-}
+_printf(std::basic_ostream<Ch, Tr>& os, const Ch* fmt) { os << fmt; }
 
 template <class Ch, class Tr,
           my::printable<std::basic_ostream<Ch, Tr>> Arg,
           my::printable<std::basic_ostream<Ch, Tr>>... Args>
-constexpr void
-_printf(std::basic_ostream<Ch, Tr>& os,
-        const Ch* format, Arg&& arg, Args&&... args) {
-    for (; *format != '\0'; ++format) {
-        if (*format == '{') {
-            if (*(format + 1) != '}') {
-                os << '{';
-                continue;
-            }
-            os << arg;
-            return _printf(os, (format + 2), std::forward<Args>(args)...);
+constexpr void _printf(std::basic_ostream<Ch, Tr>& os,
+                       const Ch* fmt, Arg&& arg, Args&&... args) {
+    for (; !Tr::eq(*fmt, '\0'); ++fmt) {
+        if (Tr::eq(*fmt, '{') and Tr::eq(*(fmt + 1), '}')) {
+            return _printf(os << arg, (fmt + 2), std::forward<Args>(args)...);
         }
-        os << *format;
+        os << *fmt;
     }
 }
 
@@ -53,9 +45,8 @@ _printf(std::basic_ostream<Ch, Tr>& os,
  */
 template <class Ch, class Tr,
           my::printable<std::basic_ostream<Ch, Tr>>... Args>
-constexpr void
-printf(std::basic_ostream<Ch, Tr>& os,
-       const Ch* format, Args&&... args) {
+constexpr void printf(std::basic_ostream<Ch, Tr>& os,
+                      const Ch* format, Args&&... args) {
     detail::_printf(os, format, std::forward<Args>(args)...);
 }
 
@@ -67,8 +58,7 @@ printf(std::basic_ostream<Ch, Tr>& os,
  * @param args any printable types
  */
 template <class Ch, my::printable<std::basic_ostream<Ch>>... Args>
-constexpr void
-printf(const Ch* format, Args&&... args) {
+constexpr void printf(const Ch* format, Args&&... args) {
     if constexpr (std::same_as<Ch, wchar_t>) {
         detail::_printf(std::wcout, format, std::forward<Args>(args)...);
     } else {
@@ -87,8 +77,7 @@ printf(const Ch* format, Args&&... args) {
  */
 template <class Ch,
           my::printable<std::basic_ostream<Ch>>... Args>
-[[nodiscard]] inline auto
-format(const Ch* format, Args&&... args) {
+[[nodiscard]] inline auto format(const Ch* format, Args&&... args) {
     std::basic_stringstream<Ch> ss;
     detail::_printf(ss, format, std::forward<Args>(args)...);
     return ss.str();
