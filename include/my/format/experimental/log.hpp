@@ -10,7 +10,7 @@
 #include <my/format/format.hpp>
 #include <my/format/repr.hpp>
 
-namespace my {
+namespace my::experimental {
 
 #ifdef MY_LOG_COLORED
 struct LogPrintColors {

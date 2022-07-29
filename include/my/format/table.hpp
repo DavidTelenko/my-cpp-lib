@@ -33,8 +33,8 @@ struct Table {
      * @param args rest of arguments
      * @return auto& chain reference to table object
      */
-    template <my::printable<ostream_t> Arg,
-              my::printable<ostream_t>... Args>
+    template <my::representable<ostream_t> Arg,
+              my::representable<ostream_t>... Args>
     inline auto& pushRow(Arg&& arg, Args&&... args) {
         _body.push_back(_receiveRow(std::forward<Arg>(arg),
                                     std::forward<Args>(args)...));
@@ -51,8 +51,8 @@ struct Table {
      * @param args rest of arguments
      * @return auto& chain reference to table object
      */
-    template <my::printable<ostream_t> Arg,
-              my::printable<ostream_t>... Args>
+    template <my::representable<ostream_t> Arg,
+              my::representable<ostream_t>... Args>
     inline auto& header(Arg&& arg, Args&&... args) {
         _header = _receiveRow(std::forward<Arg>(arg),
                               std::forward<Args>(args)...);
@@ -69,8 +69,8 @@ struct Table {
      * @param args rest of arguments
      * @return auto& chain reference to table object
      */
-    template <my::printable<ostream_t> Arg,
-              my::printable<ostream_t>... Args>
+    template <my::representable<ostream_t> Arg,
+              my::representable<ostream_t>... Args>
     inline auto& footer(Arg&& arg, Args&&... args) {
         _footer = _receiveRow(std::forward<Arg>(arg),
                               std::forward<Args>(args)...);
@@ -404,8 +404,7 @@ struct Table {
               my::representable<ostream_t>... Args>
     inline auto _receiveRow(Arg&& arg, Args&&... args) {
         if constexpr (sizeof...(args) == 0 and std::ranges::range<Arg>) {
-            return _readRow(std::ranges::begin(std::forward<Arg>(arg)),
-                            std::ranges::end(std::forward<Arg>(arg)));
+            return _readRow(std::ranges::begin(arg), std::ranges::end(arg));
         } else {
             return _readVariadicRow(std::forward<Arg>(arg),
                                     std::forward<Args>(args)...);

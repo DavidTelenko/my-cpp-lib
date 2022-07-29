@@ -7,7 +7,7 @@
 #include <cassert>
 #include <locale>
 
-namespace my {
+namespace my::experimental {
 
 template <class Ch, class Tr = std::char_traits<Ch>>
 struct printer_base {
