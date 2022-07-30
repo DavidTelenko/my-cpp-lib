@@ -250,7 +250,7 @@ struct RangeRepresenter
         if (size >= maxLength + lastLength) {
             os << "(" << size - maxLength - lastLength << ")";
             _delim(os);
-            (*this)(os, std::ranges::prev(last, lastLength), last);
+            (*this)(os, std::ranges::next(first, size - lastLength), last);
         }
     }
 
@@ -402,4 +402,16 @@ constexpr void _prettyRepresent(std::basic_ostream<Ch, Tr>& os,
 
 constexpr DefaultRepresenter represent;
 constexpr PrettyRepresenter pretty;
+
+struct DecoratedRepresenter
+    : public BaseRepresenter<DecoratedRepresenter> {
+    template <class Ch, class Tr, class T>
+    constexpr void operator()(std::basic_ostream<Ch, Tr>& os,
+                              const T& value) const {
+        detail::_applyCommonManips(os, value);
+    }
+};
+
+constexpr DecoratedRepresenter decorated;
+
 };  // namespace my
