@@ -143,6 +143,8 @@ struct equalToValue {
     T _value;
 };
 
+namespace predicates {
+
 /**
  * @brief Negate predicate functor generator
  *
@@ -199,6 +201,24 @@ struct compose {
     PredB _rhs;
     Comp _comp;
 };
+
+template <my::value PredA, my::value PredB>
+auto _and(PredA lhs, PredA rhs) {
+    return compose(lhs, rhs, std::logical_and<void>{});
+}
+
+template <my::value PredA, my::value PredB>
+auto _nand(PredA lhs, PredA rhs) { return negate(_and(lhs, rhs)); }
+
+template <my::value PredA, my::value PredB>
+auto _or(PredA lhs, PredA rhs) {
+    return compose(lhs, rhs, std::logical_or<void>{});
+}
+
+template <my::value PredA, my::value PredB>
+auto _nor(PredA lhs, PredA rhs) { return negate(_or(lhs, rhs)); }
+
+};  // namespace predicates
 
 template <class F, class P, class... Args>
 concept invocable_with_projection =
