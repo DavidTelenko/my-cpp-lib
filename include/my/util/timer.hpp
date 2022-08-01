@@ -60,17 +60,6 @@ class Timer {
     bool _stopped = true;
 };
 
-template <class F, class... Args>
-[[nodiscard]] auto timeit(F function, Args&&... args) {
-    using namespace std::chrono;
-
-    const auto prev = high_resolution_clock::now();
-    std::invoke(function, std::forward<Args>(args)...);
-    const auto curr = high_resolution_clock::now();
-
-    return curr - prev;
-}
-
 }  // namespace my
 
 #endif  // MY_TIMER_HPP

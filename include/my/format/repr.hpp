@@ -252,7 +252,7 @@ struct RangeRepresenter
         if (size >= maxLength + lastLength) {
             os << "(" << size - maxLength - lastLength << ")";
             _delim(os);
-            (*this)(os, std::ranges::prev(last, lastLength), last);
+            (*this)(os, std::ranges::next(first, size - lastLength), last);
         }
     }
 
