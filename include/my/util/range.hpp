@@ -192,7 +192,7 @@ template <my::arithmetic T>
 explicit Range(T, T, T) -> Range<T>;
 
 template <my::arithmetic T>
-constexpr auto range(T start, T stop, T step) {
+constexpr auto range(T start, T stop, T step = 1) {
     return Range(start, stop, step);
 }
 
