@@ -58,16 +58,24 @@ concept associative_container = requires(T val) {
 };
 
 template <class T>
-concept reservable_range = std::ranges::sized_range<T> and 
-requires(std::remove_reference_t<T>& obj, 
-         decltype(std::ranges::size(obj)) size) {
-    obj.reserve(size);
+using range_size_t = decltype(std::ranges::size(std::declval<T>()));
+
+template <class T>
+concept reservable_range = std::ranges::sized_range<T> and requires(
+    std::remove_cvref_t<T>& rng, range_size_t<T> size) {
+    rng.reserve(size);
 };
 
 template <class T>
 concept erasable_range = std::ranges::range<T> and requires(
-    std::remove_reference_t<T> &val, std::ranges::iterator_t<T> iter) {
-    { val.erase(iter) } -> std::same_as<std::ranges::iterator_t<T>>;
+    std::remove_cvref_t<T>& rng, std::ranges::iterator_t<T> iter) {
+    { rng.erase(iter) } -> std::same_as<std::ranges::iterator_t<T>>;
+};
+
+template <class T>
+concept push_back_callable_range = std::ranges::range<T> and requires(
+    std::remove_cvref_t<T>& rng, std::ranges::range_value_t<T> val) {
+    rng.push_back(val);
 };
 
 template <class T>
@@ -105,8 +113,8 @@ struct function_traits<R(Args...)> {
 
     static constexpr std::size_t arity = sizeof...(Args);
 
-    template <std::size_t N> requires (N < arity)
-    struct argument {
+    template <std::size_t N>
+    requires(N < arity) struct argument {
         using type = typename std::tuple_element<N, std::tuple<Args...>>::type;
     };
 };
@@ -133,8 +141,8 @@ struct function_traits {
 
     static constexpr std::size_t arity = call_type::arity - 1;
 
-    template <std::size_t N> requires (N < arity)
-    struct argument {
+    template <std::size_t N>
+    requires(N < arity) struct argument {
         using type = typename call_type::template argument<N + 1>::type;
     };
 };
