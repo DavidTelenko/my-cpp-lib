@@ -20,7 +20,7 @@ inline std::vector<String> split(const String &what,
     size_t next = 0;
 
     while ((next = what.find(delim, last)) != String::npos) {
-        insert(result, what.substr(last, next - last));
+        result.push_back(what.substr(last, next - last));
         last = next + 1;
     }
     result.push_back(what.substr(last));
