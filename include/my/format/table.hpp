@@ -99,6 +99,42 @@ struct Table {
     }
 
     /**
+     * @brief Retrieve reference to internal std::vector<std::vector<std::string>>
+     * of string rows
+     *
+     * @return auto& to data
+     */
+    inline auto& data() { return _body; }
+
+    /**
+     * @brief Retrieve const reference to internal std::vector<std::vector<std::string>>
+     * of string rows
+     *
+     * @return auto& to data
+     */
+    inline const auto& data() const { return _body; }
+
+    /**
+     * @brief Clear body of table
+     *
+     * @return auto& chain reference to table object
+     */
+    inline auto& clear() {
+        _body.clear();
+        return *this;
+    }
+
+    /**
+     * @brief Range access
+     *
+     * @return respective iterator
+     */
+    inline auto begin() { return _body.begin(); }
+    inline auto end() { return _body.end(); }
+    inline auto begin() const { return _body.begin(); }
+    inline auto end() const { return _body.end(); }
+
+    /**
      * @brief Sets how much rows needs to be displayed after which
      * footer will appear.
      *
@@ -293,10 +329,11 @@ struct Table {
     inline auto
     _printRowHelper(ostream_t& os, const std::vector<string_t>& row) const {
         const auto dash = my::styles[static_cast<size_t>(_style)][1];  // │
-
-        for (auto row_iter = begin(row), size_iter = begin(_sizes),
-                  row_end = end(row), size_end = end(_sizes);
-             row_iter != row_end and size_iter != size_end;
+        auto row_iter = row.begin();
+        auto size_iter = _sizes.begin();
+        auto row_end = row.end();
+        auto size_end = _sizes.end();
+        for (; row_iter != row_end and size_iter != size_end;
              ++row_iter, ++size_iter) {
             const auto element_size = row_iter->size();
             const auto size = *size_iter;
