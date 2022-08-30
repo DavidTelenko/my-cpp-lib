@@ -285,7 +285,7 @@ constexpr auto saturate(T x) noexcept -> T {
  * @param x number to compute inverse square root from
  * @return inv sqrt value
  */
-template <FP T>
+template <FP T> 
 constexpr auto qrsqrt(T x) noexcept -> T {
     // (enable only on IEEE 754)
     static_assert(std::numeric_limits<T>::is_iec559);
@@ -296,15 +296,16 @@ constexpr auto qrsqrt(T x) noexcept -> T {
 
     if constexpr (std::same_as<T, float>) {
         float y = std::bit_cast<float>(
-            0x5f3759df - (std::bit_cast<std::uint32_t>(x) >> 1));
+            0x5F3759DF - (std::bit_cast<uint32_t>(x) >> 1));
 
         return y * (1.5f - (x * 0.5f * y * y));
     }
 
     else /* std::same_as<T, double> */ {
         double y = std::bit_cast<double>(
-            0x5fe6eb50c7aa19f9 - (std::bit_cast<std::uint64_t>(x) >> 1));
-
+            0x5fe6eb50c7aa19f9 - (std::bit_cast<uint64_t>(x) >> 1));
+        //  0x5FE6EB50C7B537A9
+        //  0x5FE6EC85E7DE30DA
         return y * (1.5 - (x * 0.5 * y * y));
     }
 }
