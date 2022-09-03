@@ -33,5 +33,6 @@
 
 /.vscode
 /debug
+/release
 /test
 /src

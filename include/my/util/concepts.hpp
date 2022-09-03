@@ -79,6 +79,12 @@ concept push_back_callable_range = std::ranges::range<T> and requires(
 };
 
 template <class T>
+concept insert_callable_range = std::ranges::range<T> and requires(
+    std::remove_cvref_t<T>& rng, std::ranges::range_value_t<T> val) {
+    rng.insert(val);
+};
+
+template <class T>
 concept value = requires {
     not(std::is_reference_v<T> or
         std::is_volatile_v<T> or

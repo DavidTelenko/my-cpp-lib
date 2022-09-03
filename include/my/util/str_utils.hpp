@@ -8,6 +8,7 @@
 #include <numeric>
 #include <ranges>
 #include <vector>
+#include <optional>
 
 namespace my {
 

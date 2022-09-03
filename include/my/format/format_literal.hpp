@@ -9,7 +9,7 @@ struct format_closure {
    public:
     using ostream_t = std::basic_ostream<Ch, Tr>;
 
-    explicit format_closure(const Ch* fmt, ostream_t& os, Representer repr)
+    explicit format_closure(ostream_t& os, const Ch* fmt, Representer repr)
         : _fmt(fmt), _initial(fmt), _repr(repr), _os(&os) {
     }
 
@@ -95,19 +95,19 @@ struct format_closure {
 };
 
 template <class Ch, class Tr, class Representer>
-constexpr auto fmt(const Ch* format,
-                   std::basic_ostream<Ch, Tr>& os,
+constexpr auto fmt(std::basic_ostream<Ch, Tr>& os,
+                   const Ch* format,
                    Representer repr) {
-    return format_closure(format, os, std::move(repr));
+    return format_closure(os, format, std::move(repr));
 }
 
 template <class Ch, class Tr, class Representer>
 constexpr auto fmt(const Ch* format,
                    Representer repr) {
     if constexpr (std::same_as<Ch, wchar_t>) {
-        return fmt(format, std::wcout, std::move(repr));
+        return fmt(std::wcout, format, std::move(repr));
     } else {
-        return fmt(format, std::cout, std::move(repr));
+        return fmt(std::cout, format, std::move(repr));
     }
 }
 
@@ -118,9 +118,9 @@ constexpr auto fmt(const Ch* format,
 }
 
 template <class Ch, class Tr>
-constexpr auto fmt(const Ch* format,
-                   std::basic_ostream<Ch, Tr>& os) {
-    return fmt(format, os, my::represent);
+constexpr auto fmt(std::basic_ostream<Ch, Tr>& os,
+                   const Ch* format) {
+    return fmt(os, format, my::represent);
 }
 
 template <class Ch>
