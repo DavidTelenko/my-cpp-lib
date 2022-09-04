@@ -162,7 +162,8 @@ struct negate {
 
     template <class... Args>
     requires std::predicate<Predicate, Args...>
-    constexpr bool operator()(Args &&...args) const noexcept {
+    constexpr bool 
+    operator()(Args &&...args) const noexcept {
         return not std::invoke(_predicate, std::forward<Args>(args)...);
     }
 
@@ -191,7 +192,8 @@ struct compose {
     template <class... Args>
     requires std::predicate<PredicateA, Args...> and
         std::predicate<PredicateB, Args...>
-    constexpr bool operator()(Args &&...args) const noexcept {
+    constexpr bool 
+    operator()(Args &&...args) const noexcept {
         return _comp(std::invoke(_lhs, args...),
                      std::invoke(_rhs, args...));
     }
@@ -316,7 +318,7 @@ struct compare {
 
     template <class T, class U>
     requires my::invocable_with_projection<BiPredicate, Projection, T, U>
-    constexpr bool
+    constexpr bool 
     operator()(const T &a, const U &b) const {
         return std::invoke(_pred,
                            std::invoke(_proj, a),
@@ -340,8 +342,8 @@ struct compare {
             [this, f, p]<class T, class U> 
             requires my::invocable_with_projection<BiPred2, Proj2, T, U>
             (const T &a, const U &b) -> bool {
-                if (operator()(a, b)) return true;
-                if (operator()(b, a)) return false;
+                if ((*this)(a, b)) return true;
+                if ((*this)(b, a)) return false;
 
                 // a == b for primary condition, go to secondary
                 return std::invoke(f, std::invoke(p, a), 
