@@ -21,6 +21,8 @@ namespace detail {
  */
 template <class... Ts>
 struct overload : Ts... { using Ts::operator()...; };
+template <class... Ts>
+overload(Ts...) -> overload<Ts...>;
 
 /**
  * @brief Manipulator to print floats without zeroes at the end
@@ -252,18 +254,11 @@ class Ini {
     using float_t = double;
     using int_t = int64_t;
     using string_t = std::string;
-
-    struct null_t {
-        friend auto& operator<<(std::ostream& os, const null_t& obj) {
-            os << "null";
-            return os;
-        }
-    };
+    struct null_t {};
 
     using key_t = string_t;
     using value_t = std::variant<null_t, bool_t, float_t, int_t, string_t>;
     using container_t = Map<key_t, value_t>;
-
     using char_t = string_t::value_type;
 
    public:
@@ -396,8 +391,8 @@ class Ini {
      */
     void write(std::ostream& os) const {
         auto value_visitor = detail::overload(
+            [](null_t val) {},
             [&os](bool_t val) { os << val; },
-            [&os](null_t val) { os << val; },
             [&os](int_t val) { os << val; },
             [&os](float_t val) { os << detail::stripZeroes(val); },
             [&os](const string_t& val) { os << std::quoted(val); });
@@ -1051,6 +1046,16 @@ class Ini {
    private:
     Map<key_t, container_t> _sections;
 };
+
+namespace ini {
+
+using bool_t = bool;
+using float_t = double;
+using int_t = int64_t;
+using string_t = std::string;
+struct null_t {};
+
+}  // namespace ini
 
 inline namespace literals {
 
