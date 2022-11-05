@@ -84,18 +84,48 @@ concept insert_callable_range = std::ranges::range<T> and requires(
     rng.insert(val);
 };
 
-template <class T>
-concept value = requires {
-    not(std::is_reference_v<T> or
-        std::is_volatile_v<T> or
-        std::is_const_v<T>);
-};
-
 template <class T, class Ostream = std::ostream,
           class R = std::remove_reference_t<T>,
           class O = std::remove_reference_t<Ostream>>
 concept printable = requires(O& os, const R& obj) {
     { os << obj } -> std::same_as<O&>;
+};
+
+template <class T, class Ostream = std::ostream,
+          class R = std::remove_reference_t<T>,
+          class O = std::remove_reference_t<Ostream>>
+concept manipulator = requires(O& os, const R& obj) {
+    {obj(os)};
+};
+
+template <class T, class U, class Ostream = std::ostream>
+concept representer_for =
+    requires(T f, const std::remove_reference_t<U>& val, Ostream& os) {
+    {f(os, val)};
+};
+
+template <class T, class U, class Ostream = std::ostream>
+concept representable_with = representer_for<U, T, Ostream>;
+
+template <class T, class U>
+concept representer_closure_for =
+    requires(T f, const std::remove_reference_t<U>& val) {
+    {f(val)};
+};
+
+template <class T, class Ostream = std::ostream,
+          class R = std::remove_reference_t<T>>
+concept representable =
+    my::printable<R, Ostream> or
+    my::tuple_like<R> or
+    std::ranges::range<R> or
+    std::input_or_output_iterator<R>;
+
+template <class T>
+concept value = requires {
+    not(std::is_reference_v<T> or
+        std::is_volatile_v<T> or
+        std::is_const_v<T>);
 };
 
 template <class T>

@@ -23,9 +23,9 @@
 #endif
 
 /**
- * @brief simple timing macro for measuring and printing 
+ * @brief simple timing macro for measuring and printing
  * time of execution of provided expression
- * 
+ *
  */
 #if defined(NDEBUG) && defined(MY_DONT_PRINT_TIMEIT_RESULTS)
 #define timeit(times, expr) ({ (expr); })
@@ -49,7 +49,7 @@
     my::printf(                                                           \
         std::cerr,                                                        \
         "[{}:{}] {}\n"                                                    \
-        "  time spent:\n"                                               \
+        "  time spent:\n"                                                 \
         "    > total  : {} ns ({} ms)\n"                                  \
         "    > average: {} ns ({} ms)\n",                                 \
         __FILENAME__, __LINE__, #expr, ns, ms, ns / amount, ms / amount); \

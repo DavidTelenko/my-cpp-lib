@@ -4,101 +4,78 @@
 
 namespace my {
 
-template <class Ch, class Tr, class Representer>
-struct format_closure {
-   public:
-    using ostream_t = std::basic_ostream<Ch, Tr>;
-
-    explicit format_closure(ostream_t& os, const Ch* fmt, Representer repr)
-        : _fmt(fmt), _initial(fmt), _repr(repr), _os(&os) {
+template <class Ch, class Tr>
+struct FormatEmitter {
+    explicit FormatEmitter(const Ch* fmt)
+        : _fmt(fmt) {
     }
 
-    // dirty
-    ~format_closure() { *_os << _fmt; }
-
-    template <my::representable_with<Representer, ostream_t>... Args>
-    auto& print(Args&&... args) {
-        return _print(std::forward<Args>(args)...);
+    constexpr auto tail(std::basic_ostream<Ch, Tr>& os) const {
+        for (; !Tr::eq(*_fmt, '\0'); ++_fmt) {
+            if (Tr::eq(*_fmt, '{') and
+                Tr::eq(*(_fmt + 1), '}')) {
+                return true;
+            }
+            os << *_fmt;
+        }
+        return false;
     }
 
-    template <my::representable_with<Representer, ostream_t>... Args>
-    auto& operator()(Args&&... args) {
-        return _print(std::forward<Args>(args)...);
-    }
-
-    template <my::representable_with<Representer, ostream_t> Arg>
-    auto& operator|(Arg&& arg) {
-        return _print(std::forward<Arg>(arg));
-    }
-
-    template <my::representable_with<Representer, ostream_t> Arg>
-    auto& operator<<(Arg&& arg) {
-        return _print(std::forward<Arg>(arg));
-    }
-
-    auto& setStream(ostream_t& stream) {
-        _os = &stream;
-        return *this;
-    }
-
-    auto& operator[](ostream_t& stream) {
-        return setStream(stream);
-    }
-
-    auto& setFormat(const char* fmt) {
-        _initial = fmt;
-        _fmt = fmt;
-        return *this;
-    }
-
-    auto& operator[](const char* format) {
-        return setFormat(format);
-    }
-
-    [[deprecated("Experimental")]] auto& operator[](int) {
-        return resetFormat();
-    }
-
-    auto& resetFormat() {
-        _fmt = _initial;
-        return *this;
+    constexpr auto operator()(std::basic_ostream<Ch, Tr>& os) const {
+        if (tail(os)) {
+            _fmt += 2;
+            return true;
+        }
+        return false;
     }
 
    private:
-    template <my::representable_with<Representer, ostream_t> Arg,
-              my::representable_with<Representer, ostream_t>... Args>
-    auto& _print(Arg&& arg, Args&&... args) {
-        for (; !Tr::eq(*_fmt, '\0'); ++_fmt) {
-            if (Tr::eq(*_fmt, '{') and Tr::eq(*(_fmt + 1), '}')) {
-                _repr(*_os, arg), _fmt += 2;
-                return _print(std::forward<Args>(args)...);
-            }
-            *_os << *_fmt;
-        }
-        return *this;
-    }
-
-    auto& _print() {
-        for (; !Tr::eq(*_fmt, '{') and
-               !Tr::eq(*_fmt, '\0');
-             ++_fmt) {
-            *_os << *_fmt;
-        }
-        return *this;
-    }
-
-    const Ch* _fmt;
-    const Ch* _initial;
-
-    Representer _repr;
-    ostream_t* _os;
+    using str = const Ch*;
+    mutable str _fmt;
 };
+
+template <class Representer, class Emitter>
+struct FormatRepresenter
+    : public BaseRepresenter<FormatRepresenter<Representer, Emitter>> {
+   public:
+    constexpr explicit FormatRepresenter(Emitter emitter,
+                                         Representer representer)
+        : _emitter(std::move(emitter)),
+          _represent(std::move(representer)) {
+    }
+
+    template <class Ch, class Tr,
+              my::representable_with<Representer, std::basic_ostream<Ch, Tr>> T>
+    constexpr void operator()(std::basic_ostream<Ch, Tr>& os,
+                              const T& value) const {
+        if (_emitter(os)) _represent(os, value);
+        _emitter.tail(os);
+    }
+
+   private:
+    Emitter _emitter;
+    Representer _represent;
+};
+
+template <class Representer, class Ch, class Tr>
+using DefaultFormatRepresenter =
+    FormatRepresenter<Representer, FormatEmitter<Ch, Tr>>;
+
+template <class Representer, class Ch, class Tr>
+using FormatClosure =
+    my::BaseRepresenterClosure<
+        DefaultFormatRepresenter<Representer, Ch, Tr>,
+        Ch, Tr>;
 
 template <class Ch, class Tr, class Representer>
 constexpr auto fmt(std::basic_ostream<Ch, Tr>& os,
                    const Ch* format,
                    Representer repr) {
-    return format_closure(os, format, std::move(repr));
+    return FormatClosure<Representer, Ch, Tr>(
+        os,
+        DefaultFormatRepresenter(
+            FormatEmitter<Ch, Tr>(format),
+            std::move(repr)));
 }
 
 template <class Ch, class Tr, class Representer>

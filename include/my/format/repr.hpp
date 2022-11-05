@@ -14,53 +14,71 @@
 
 namespace my {
 
-template <class T, class Ostream = std::ostream,
-          class R = std::remove_reference_t<T>>
-concept representable =
-    my::printable<R, Ostream> or
-    my::tuple_like<R> or
-    std::ranges::range<R> or
-    std::input_or_output_iterator<R>;
-
-template <class T, class U, class Ostream = std::ostream>
-concept representer_for =
-    requires(T f, const std::remove_reference_t<U>& val, Ostream& os) {
-    {f(os, val)};
-};
-
-template <class T, class U, class Ostream = std::ostream>
-concept representable_with = representer_for<U, T, Ostream>;
-
-template <class T, class U>
-concept representer_closure_for =
-    requires(T f, const std::remove_reference_t<U>& val) {
-    {f(val)};
-};
-
-// implicit
-
 namespace detail {
 
-template <class Ch, class Tr, representable<std::basic_ostream<Ch, Tr>> T>
+template <class Ch, class Tr, my::representable<std::basic_ostream<Ch, Tr>> T>
 constexpr void _represent(std::basic_ostream<Ch, Tr>& os, const T& value);
 
-template <class Ch, class Tr, representable<std::basic_ostream<Ch, Tr>> T>
+template <class Ch, class Tr, my::representable<std::basic_ostream<Ch, Tr>> T>
 constexpr void _prettyRepresent(std::basic_ostream<Ch, Tr>& os, const T& value);
 
-// representers
+}  // namespace detail
+
+template <class Representer, class Ch, class Tr>
+struct BaseRepresenterClosure {
+   public:
+    using ostream_t = std::basic_ostream<Ch, Tr>;
+
+    constexpr explicit BaseRepresenterClosure(ostream_t& os, Representer repr)
+        : _os(std::addressof(os)), _repr(std::move(repr)) {}
+
+    auto& setStream(ostream_t& os) {
+        _os = &os;
+        return *this;
+    }
+
+    auto& operator[](ostream_t& stream) {
+        return setStream(stream);
+    }
+
+    template <my::representable_with<Representer, ostream_t>... Args>
+    auto& print(Args&&... args) {
+        return _print(std::forward<Args>(args)...);
+    }
+
+    template <my::representable_with<Representer, ostream_t>... Args>
+    auto& operator()(Args&&... args) {
+        return _print(std::forward<Args>(args)...);
+    }
+
+    template <my::representable_with<Representer, ostream_t> Arg>
+    auto& operator<<(Arg&& arg) {
+        return _print(std::forward<Arg>(arg));
+    }
+
+   protected:
+    template <my::representable_with<Representer, ostream_t>... Args>
+    auto& _print(Args&&... args) {
+        (_repr(*_os, args), ...);
+        return *this;
+    }
+
+    ostream_t* _os;
+    Representer _repr;
+};
 
 template <class Representer, my::representable_with<Representer> T>
-class _RepresentableValueView {
+class RepresentableValueView {
    public:
-    constexpr explicit _RepresentableValueView(Representer represent,
-                                               const T& value)
+    constexpr explicit RepresentableValueView(Representer represent,
+                                              const T& value)
         : _represent(std::move(represent)),
           _value(value) {
     }
 
     template <class Ch, class Tr>
     friend auto& operator<<(std::basic_ostream<Ch, Tr>& os,
-                            const _RepresentableValueView& obj) {
+                            const RepresentableValueView& obj) {
         obj._represent(os, obj._value);
         return os;
     }
@@ -70,91 +88,41 @@ class _RepresentableValueView {
     const T& _value;
 };
 
-}  // namespace detail
-
-template <class Representer>
-struct BaseRepresenter {
-    template <class Ch, class Tr,
-              my::representable_with<Representer, std::basic_ostream<Ch, Tr>> T>
-    constexpr void print(std::basic_ostream<Ch, Tr>& os,
-                         const T& value) const {
-        _derived()(os, value);
-    }
-
-    template <my::representable_with<Representer> T>
-    constexpr void print(const T& value) const {
-        print(std::cout, value);
-    }
-
-    template <class Ch, class Tr,
-              my::representable_with<Representer, std::basic_ostream<Ch, Tr>> T>
-    constexpr void println(std::basic_ostream<Ch, Tr>& os,
-                           const T& value) const {
-        print(os, value), os << '\n';
-    }
-
-    template <my::representable_with<Representer> T>
-    constexpr void println(const T& value) const {
-        println(std::cout, value);
-    }
-
-    template <class Ch, class Tr>
-    requires my::representer_for<Representer, const Ch*,
-                                 std::basic_ostream<Ch, Tr>>
-    constexpr void printf(std::basic_ostream<Ch, Tr>& os,
-                          const Ch* format) const {
-        os << format;
-    }
-
-    template <class Ch, class Tr,
-              my::representable_with<
-                  Representer, std::basic_ostream<Ch, Tr>>
-                  Arg,
-              my::representable_with<
-                  Representer, std::basic_ostream<Ch, Tr>>... Args>
-    constexpr void printf(std::basic_ostream<Ch, Tr>& os,
-                          const Ch* format,
-                          Arg&& arg, Args&&... args) const {
-        for (; *format != '\0'; ++format) {
-            if (*format == '{') {
-                if (*(format + 1) != '}') {
-                    os << '{';
-                    continue;
-                }
-                print(os, arg);
-                return printf(os, (format + 2), std::forward<Args>(args)...);
-            }
-            os << *format;
-        }
-    }
-
+template <class T>
+constexpr auto emitter(T&& val) {
     // clang-format off
-    template <class Ch, my::representable_with<Representer>... Args>
-    constexpr void printf(const Ch* format, Args&&... args) const {
-        // clang-format on
-        printf(std::cout, format, std::forward<Args>(args)...);
-    }
+    return [val = std::forward<T>(val)]<class Ch, class Tr>
+        requires my::printable<T, std::basic_ostream<Ch, Tr>>
+        (std::basic_ostream<Ch, Tr> & os) {
+            os << val;
+        };
+    // clang-format on
+}
 
-    template <class Ch, class Tr, my::representable_with<Representer> T>
+inline namespace repr {
+
+template <class Derived>
+struct BaseRepresenter {
+    template <class Ch, class Tr, my::representable_with<Derived> T>
     constexpr auto get(const T& value) const {
         std::basic_stringstream<Ch, Tr> ss;
-        print(ss, value);
+        _derived()(ss, value);
         return ss.str();
     }
 
-    template <my::representable_with<Representer> T>
+    template <my::representable_with<Derived> T>
     constexpr auto get(const T& value) const {
         return get<char, std::char_traits<char>>(value);
     }
 
-    template <my::representable_with<Representer> T>
+    template <my::representable_with<Derived> T>
     constexpr auto view(const T& value) const {
-        return detail::_RepresentableValueView(_derived(), value);
+        return RepresentableValueView(_derived(), value);
     }
 
    private:
     constexpr const auto& _derived() const noexcept {
-        return static_cast<const Representer&>(*this);
+        return static_cast<const Derived&>(*this);
     }
 };
 
@@ -176,31 +144,12 @@ struct PrettyRepresenter
     }
 };
 
-struct DefaultPutDelim {
-    template <class Ch, class Tr>
-    constexpr void operator()(std::basic_ostream<Ch, Tr>& os) const {
-        os << ", ";
-    }
-};
-
-template <class T>
-constexpr auto delim(T&& val) {
-    // clang-format off
-    return [val = std::forward<T>(val)]<class Ch, class Tr>
-        requires my::printable<T, std::basic_ostream<Ch, Tr>>
-        (std::basic_ostream<Ch, Tr> & os) {
-            os << val;
-        };
-    // clang-format on
-}
-
-template <class Representer = DefaultRepresenter,
-          class PutDelim = DefaultPutDelim>
+template <class Representer, class PutDelim>
 struct RangeRepresenter
     : public BaseRepresenter<RangeRepresenter<Representer, PutDelim>> {
    public:
-    constexpr explicit RangeRepresenter(PutDelim putDelim = {},
-                                        Representer representer = {})
+    constexpr explicit RangeRepresenter(PutDelim putDelim,
+                                        Representer representer)
         : _delim(std::move(putDelim)),
           _represent(std::move(representer)) {
     }
@@ -271,15 +220,12 @@ struct RangeRepresenter
     Representer _represent;
 };
 
-constexpr RangeRepresenter<DefaultRepresenter> rangeRepresent;
-
-template <class Representer = DefaultRepresenter,
-          class PutDelim = DefaultPutDelim>
+template <class Representer, class PutDelim>
 struct TupleRepresenter
     : public BaseRepresenter<TupleRepresenter<Representer, PutDelim>> {
    public:
-    constexpr explicit TupleRepresenter(PutDelim putDelim = {},
-                                        Representer representer = {})
+    constexpr explicit TupleRepresenter(PutDelim putDelim,
+                                        Representer representer)
         : _delim(std::move(putDelim)),
           _represent(std::move(representer)) {
     }
@@ -300,12 +246,57 @@ struct TupleRepresenter
     Representer _represent;
 };
 
-constexpr TupleRepresenter<DefaultRepresenter> tupleRepresent;
+template <class Representer, class PutDelim>
+using PairRepresenter =
+    TupleRepresenter<Representer, PutDelim>;
 
-template <class T = DefaultRepresenter>
-using PairRepresenter = TupleRepresenter<T>;
+constexpr RangeRepresenter rangeRepresent(emitter(", "), DefaultRepresenter{});
+constexpr TupleRepresenter tupleRepresent(emitter(", "), DefaultRepresenter{});
+constexpr PairRepresenter pairRepresent(emitter(", "), DefaultRepresenter{});
 
-constexpr PairRepresenter<DefaultRepresenter> pairRepresent;
+template <my::manipulator PutDelim,
+          class Representer = DefaultRepresenter>
+constexpr auto makeRangeRepresenter(
+    PutDelim dlm = emitter(", "), Representer repr = {}) {
+    return RangeRepresenter(dlm, repr);
+}
+
+template <class Delim = const char*,
+          my::representer_for<Delim> Representer = DefaultRepresenter>
+constexpr auto makeRangeRepresenter(
+    Delim dlm = ", ", Representer repr = {}) {
+    return RangeRepresenter(emitter(dlm), repr);
+}
+
+template <my::manipulator PutDelim,
+          class Representer = DefaultRepresenter>
+constexpr auto makeTupleRepresenter(
+    PutDelim dlm = emitter(", "), Representer repr = {}) {
+    return TupleRepresenter(dlm, repr);
+}
+
+template <class Delim = const char*,
+          my::representer_for<Delim> Representer = DefaultRepresenter>
+constexpr auto makeTupleRepresenter(
+    Delim dlm = ", ", Representer repr = {}) {
+    return TupleRepresenter(emitter(dlm), repr);
+}
+
+template <my::manipulator PutDelim,
+          class Representer = DefaultRepresenter>
+constexpr auto makePairRepresenter(
+    PutDelim dlm = emitter(", "), Representer repr = {}) {
+    return PairRepresenter(dlm, repr);
+}
+
+template <class Delim = const char*,
+          my::representer_for<Delim> Representer = DefaultRepresenter>
+constexpr auto makePairRepresenter(
+    Delim dlm = ", ", Representer repr = {}) {
+    return PairRepresenter(emitter(dlm), repr);
+}
+
+}  // namespace repr
 
 struct PrettyOptions {
     static size_t rangeMaxLength;
@@ -325,7 +316,7 @@ const char* PrettyOptions::tupleCloseDelim = ")";
 
 namespace detail {
 
-template <class Ch, class Tr, representable<std::basic_ostream<Ch, Tr>> T>
+template <class Ch, class Tr, my::representable<std::basic_ostream<Ch, Tr>> T>
 constexpr void _represent(std::basic_ostream<Ch, Tr>& os, const T& value) {
     if constexpr (my::printable<T>) {
         os << value;
@@ -336,11 +327,6 @@ constexpr void _represent(std::basic_ostream<Ch, Tr>& os, const T& value) {
     } else if constexpr (std::input_or_output_iterator<T>) {
         _represent(os, *value);
     }
-    //  else if constexpr (my::variant_like<T>) {
-    //     _represent(os, std::get<value.index()>());
-    // } else if constexpr (my::optional_like<T>) {
-    //     _represent(os, value.value_or("nullopt"));
-    // }
     return;
 }
 
@@ -354,7 +340,7 @@ constexpr void _applyCommonManips(std::basic_ostream<Ch, Tr>& os,
 
     if constexpr (quotedApplicable) {
         os << quoted(value);
-    } else if constexpr (std::same_as<T, Ch>) {  // probably ok
+    } else if constexpr (std::same_as<T, Ch>) {
         os << '\'' << value << '\'';
     } else if constexpr (std::same_as<T, bool>) {
         os << (value ? "true" : "false");
@@ -363,15 +349,16 @@ constexpr void _applyCommonManips(std::basic_ostream<Ch, Tr>& os,
     }
 }
 
-using PrettyRangeRepresenter = RangeRepresenter<PrettyRepresenter>;
-using PrettyTupleRepresenter = TupleRepresenter<PrettyRepresenter>;
+constexpr TupleRepresenter _tuplePrettyRepresent(
+    emitter(", "), PrettyRepresenter{});
 
-constexpr PrettyTupleRepresenter _tuplePrettyRepresent;
-constexpr PrettyRangeRepresenter _rangeOfValuesPrettyRepresent;
-constexpr RangeRepresenter
-    _rangeOfRangesOrTuplesRepresent(delim(",\n"), PrettyRepresenter{});
+constexpr RangeRepresenter _rangeOfValuesPrettyRepresent(
+    emitter(", "), PrettyRepresenter{});
 
-template <class Ch, class Tr, representable<std::basic_ostream<Ch, Tr>> T>
+constexpr RangeRepresenter _rangeOfRangesRepresent(
+    emitter(",\n"), PrettyRepresenter{});
+
+template <class Ch, class Tr, my::representable<std::basic_ostream<Ch, Tr>> T>
 constexpr void _prettyRepresent(std::basic_ostream<Ch, Tr>& os,
                                 const T& value) {
     if constexpr (my::printable<T>) {
@@ -380,9 +367,8 @@ constexpr void _prettyRepresent(std::basic_ostream<Ch, Tr>& os,
         os << PrettyOptions::rangeOpenDelim;
         using value_t = std::ranges::range_value_t<T>;
         if constexpr (not my::printable<value_t> and
-                      (std::ranges::range<value_t> or
-                       my::tuple_like<value_t>)) {
-            _rangeOfRangesOrTuplesRepresent(  // <N, _nesting<T>()>()
+                      std::ranges::range<value_t>) {
+            _rangeOfRangesRepresent(
                 os, value,
                 PrettyOptions::rangeMaxLength,
                 PrettyOptions::rangeMaxLengthFromEnd);
@@ -400,46 +386,15 @@ constexpr void _prettyRepresent(std::basic_ostream<Ch, Tr>& os,
     } else if constexpr (std::input_or_output_iterator<T>) {
         _prettyRepresent(os, *value);
     }
-    //  else if constexpr (my::variant_like<T>) {
-    //     _prettyRepresent(os, std::get<value.index()>());
-    // } else if constexpr (my::optional_like<T>) {
-    //     _prettyRepresent(os, value.value_or("nullopt"));
-    // }
-    // any is a problem i confess
 }
 
 }  // namespace detail
 
+inline namespace repr {
+
 constexpr DefaultRepresenter represent;
 constexpr PrettyRepresenter pretty;
 
-template <class Ch, class Tr, class Representer = DefaultRepresenter>
-class RepresenterClosure {
-   public:
-    using ostream_t = std::basic_ostream<Ch, Tr>;
-
-    constexpr explicit RepresenterClosure(Representer repr, ostream_t& os)
-        : _repr(std::move(repr)), _os(&os) {}
-
-    constexpr explicit RepresenterClosure(Representer repr = Representer{})
-        : _repr(std::move(repr)) {
-        if constexpr (std::same_as<Ch, wchar_t>) {
-            _os = &std::wcout;
-        } else {
-            _os = &std::cout;
-        }
-    }
-
-    template <my::representable_with<Representer, ostream_t> T>
-    void operator()(const T& val) const {
-        _repr(*_os, val);
-    }
-
-    void setStream(ostream_t& os) { _os = &os; }
-
-   private:
-    Representer _repr;
-    ostream_t* _os;
-};
+}  // namespace repr
 
 };  // namespace my

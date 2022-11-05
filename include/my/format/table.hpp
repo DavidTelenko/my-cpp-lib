@@ -10,7 +10,9 @@
 
 namespace my {
 
-template <class Ch = char, class Tr = std::char_traits<Ch>>
+template <class Representer = my::DefaultRepresenter,
+          class Ch = char,
+          class Tr = std::char_traits<Ch>>
 struct Table {
     using enum my::Style;
     using string_t = std::basic_string<Ch, Tr>;
@@ -33,8 +35,8 @@ struct Table {
      * @param args rest of arguments
      * @return auto& chain reference to table object
      */
-    template <my::representable<ostream_t> Arg,
-              my::representable<ostream_t>... Args>
+    template <my::representable_with<Representer, ostream_t> Arg,
+              my::representable_with<Representer, ostream_t>... Args>
     inline auto& pushRow(Arg&& arg, Args&&... args) {
         _body.push_back(_receiveRow(std::forward<Arg>(arg),
                                     std::forward<Args>(args)...));
@@ -51,8 +53,8 @@ struct Table {
      * @param args rest of arguments
      * @return auto& chain reference to table object
      */
-    template <my::representable<ostream_t> Arg,
-              my::representable<ostream_t>... Args>
+    template <my::representable_with<Representer, ostream_t> Arg,
+              my::representable_with<Representer, ostream_t>... Args>
     inline auto& header(Arg&& arg, Args&&... args) {
         _header = _receiveRow(std::forward<Arg>(arg),
                               std::forward<Args>(args)...);
@@ -69,8 +71,8 @@ struct Table {
      * @param args rest of arguments
      * @return auto& chain reference to table object
      */
-    template <my::representable<ostream_t> Arg,
-              my::representable<ostream_t>... Args>
+    template <my::representable_with<Representer, ostream_t> Arg,
+              my::representable_with<Representer, ostream_t>... Args>
     inline auto& footer(Arg&& arg, Args&&... args) {
         _footer = _receiveRow(std::forward<Arg>(arg),
                               std::forward<Args>(args)...);
@@ -373,7 +375,7 @@ struct Table {
 
     template <std::input_iterator It>
     auto _readRow(It begin, It end) {
-        const size_t size = std::distance(begin, end);
+        const size_t size = std::ranges::distance(begin, end);
 
         assert(size);
         if (_sizes.empty()) _sizes.resize(size);
@@ -385,7 +387,7 @@ struct Table {
                   size_end = _sizes.end();
              begin != end and size_iter != size_end;
              ++begin, ++size_iter) {
-            const auto value = my::represent.get<Ch, Tr>(begin);
+            const auto value = _represent.template get<Ch, Tr>(*begin);
             const size_t value_size = value.size();
 
             if (value_size > *size_iter) {
@@ -399,11 +401,11 @@ struct Table {
     }
 
     template <class It,
-              my::representable<ostream_t> Arg,
-              my::representable<ostream_t>... Args>
+              my::representable_with<Representer, ostream_t> Arg,
+              my::representable_with<Representer, ostream_t>... Args>
     auto _readVariadicRowImpl(std::vector<string_t>& row, It size_iter,
                               Arg&& arg, Args&&... args) {
-        const auto value = my::represent.get<Ch, Tr>(arg);
+        const auto value = _represent.template get<Ch, Tr>(arg);
         const size_t value_size = value.size();
 
         if (value_size > *size_iter) {
@@ -420,7 +422,7 @@ struct Table {
         }
     }
 
-    template <my::representable<ostream_t>... Args>
+    template <my::representable_with<Representer, ostream_t>... Args>
     auto _readVariadicRow(Args&&... args) {
         constexpr size_t size = sizeof...(args);
 
@@ -437,8 +439,8 @@ struct Table {
         return row;
     }
 
-    template <my::representable<ostream_t> Arg,
-              my::representable<ostream_t>... Args>
+    template <my::representable_with<Representer, ostream_t> Arg,
+              my::representable_with<Representer, ostream_t>... Args>
     inline auto _receiveRow(Arg&& arg, Args&&... args) {
         if constexpr (sizeof...(args) == 0 and std::ranges::range<Arg>) {
             return _readRow(std::ranges::begin(arg), std::ranges::end(arg));
@@ -465,6 +467,8 @@ struct Table {
     bool _separate_each = false;
     size_t _footer_after_lines = 0;
     const uint16_t _pad = 2;
+
+    Representer _represent;
 };
 
 namespace detail {

@@ -4,6 +4,16 @@
 
 namespace my {
 
+/**
+ * @brief Alias for emitter
+ *
+ * @tparam T any representable type by intentional Representer
+ * @param val printable value from which emitter will be constructed
+ * @return constructed emitter
+ */
+template <class T>
+constexpr auto delim(T&& val) { return emitter(val); }
+
 struct JoinFunction {
     template <std::ranges::range Range,
               my::representer_for<std::ranges::range_value_t<Range>>
