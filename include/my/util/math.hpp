@@ -125,10 +125,14 @@ constexpr f128_t operator"" _to_rad(f128_t deg) {
 namespace detail {
 
 template <FP T>
-struct PolarToCartesianResult { T x, y; };
+struct PolarToCartesianResult {
+    T x, y;
+};
 
 template <FP T>
-struct CartesianToPolarResult { T radius, angle; };
+struct CartesianToPolarResult {
+    T radius, angle;
+};
 
 };  // namespace detail
 
@@ -209,7 +213,7 @@ map(T n, U start1, V stop1, W start2, X stop2,
 }
 
 /**
- * @brief Linearly interpolate between two values (mix alias)
+ * @brief Linearly interpolate between two values
  *
  * @tparam T any arithmetic type
  * @param x The start of the range in which to interpolate.
@@ -285,7 +289,7 @@ constexpr auto saturate(T x) noexcept -> T {
  * @param x number to compute inverse square root from
  * @return inv sqrt value
  */
-template <FP T> 
+template <FP T>
 constexpr auto qrsqrt(T x) noexcept -> T {
     // (enable only on IEEE 754)
     static_assert(std::numeric_limits<T>::is_iec559);
@@ -406,7 +410,7 @@ constexpr auto fract(T n) noexcept -> detail::_FractResult<T> {
  * @param b second number
  * @return The value of a modulo b. This is computed as a - b * floor(a / b).
  */
-template <FP T, std::floating_point U>
+template <FP T, FP U>
 constexpr auto mod(T a, U b) noexcept -> std::common_type_t<T, U> {
     return a - b * std::floor(a / b);
 }
@@ -513,7 +517,7 @@ template <FP T>
 constexpr auto noise(T p) noexcept -> T {
     const T fl = std::floor(p);
     const T fc = p - fl;  // my::fract(p)
-    return mix<T>(sinrand<T>(fl), sinrand<T>(fl + 1.0), fc);
+    return lerp<T>(sinrand<T>(fl), sinrand<T>(fl + 1.0), fc);
 }
 
 /**
@@ -670,8 +674,7 @@ size_t oneDimensionalIndex(PairT point, WidthT width) {
 }
 
 template <my::arithmetic T>
-constexpr auto
-isPowerOf2(T n) -> bool {
+constexpr auto isPowerOf2(T n) -> bool {
     if constexpr (std::is_integral_v<T>) {
         return not(n > 0 and n & (n - 1));
     } else {
@@ -679,6 +682,28 @@ isPowerOf2(T n) -> bool {
         const T mantissa = std::frexp(n, &exponent);
         return mantissa == T{0.5};
     }
+}
+
+template <class F, FP T>
+constexpr auto gradient(F &&f, T &&dx) noexcept {
+    return [=]<std::convertible_to<T>... Xs>(Xs && ...xs) {
+        std::array<T, sizeof...(xs)> res;
+        const auto ddx = dx * 2;
+
+        for (size_t i = 0; i < sizeof...(xs); ++i) {
+            T params[]{std::forward<Xs>(xs)...};
+            [&]<size_t... I>(std::index_sequence<I...>) {
+                params[i] += dx;
+                const auto f1 = f(params[I]...);
+                params[i] -= ddx;
+                const auto f2 = f(params[I]...);
+                res[i] = (f1 - f2) / ddx;
+            }
+            (std::make_index_sequence<sizeof...(xs)>{});
+        }
+
+        return res;
+    };
 }
 
 /**
