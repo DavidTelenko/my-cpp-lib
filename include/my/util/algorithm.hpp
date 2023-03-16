@@ -1,6 +1,7 @@
 #pragma once
 
 #include <my/util/concepts.hpp>
+#include <my/util/defs.hpp>
 #include <my/util/functional.hpp>
 //
 #include <cassert>
@@ -116,6 +117,31 @@ forEach(Container &container, NaryFunction f,
                        std::ranges::end(container),
                        std::move(f),
                        std::ranges::begin(rest)...);
+}
+
+/**
+ * @brief
+ *
+ * @tparam NaryFunctor
+ * @tparam Ranges
+ * @param f
+ * @param ranges
+ * @return NaryFunctor
+ */
+template <class NaryFunctor, std::ranges::range... Ranges>
+constexpr auto forEach(NaryFunctor &&f, Ranges &...ranges) -> NaryFunctor {
+    using std::ranges::begin;
+    using std::ranges::end;
+
+    const auto forBody = [f = FWD(f), ... ends = end(ranges)](
+                             auto &&self, auto... iterators) {
+        if (((iterators == ends) or ...)) return;
+        f(iterators...);
+        (FWD(self))(FWD(self), ++iterators...);
+    };
+
+    forBody(FWD(forBody), begin(ranges)...);
+    return FWD(f);
 }
 
 /**
@@ -324,7 +350,7 @@ reduce(Container &&container, Accum accum, NaryFunction f,
  * @param predicate predicate for values to clear
  * @return constexpr auto iterator to last element in range
  */
-template <erasable_range Range, 
+template <erasable_range Range,
           std::predicate<std::ranges::range_value_t<Range>> Pred>
 constexpr auto erase_if(Range &range, Pred predicate) {
     return range.erase(std::ranges::remove_if(range, predicate).begin());
@@ -333,16 +359,16 @@ constexpr auto erase_if(Range &range, Pred predicate) {
 /**
  * @brief Broader erase implementation in contrary to
  *  std::erase (which works only on std::vector)
- * 
+ *
  * @tparam Range erasable_range
  * @tparam T see std::remove requirements
  * @param range range to erase elements from
  * @param predicate predicate for values to clear
- * @return constexpr auto iterator to last element in range 
+ * @return constexpr auto iterator to last element in range
  */
-template <erasable_range Range, 
+template <erasable_range Range,
           std::convertible_to<std::ranges::range_value_t<Range>> T>
-constexpr auto erase(Range &range, const T& value) {
+constexpr auto erase(Range &range, const T &value) {
     return range.erase(std::ranges::remove(range, value).begin());
 }
 

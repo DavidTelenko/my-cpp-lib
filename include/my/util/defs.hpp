@@ -20,3 +20,5 @@
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 \
                                              : __FILE__)
 #endif
+
+#define FWD(x) std::forward<decltype(x)>(x)
