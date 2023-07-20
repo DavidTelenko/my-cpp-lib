@@ -13,7 +13,7 @@ namespace my {
  * @return new lhs value
  */
 size_t hashCombine(size_t &lhs, size_t rhs) {
-    lhs ^= rhs + 0x9e3779b9 + (lhs << 6) + (lhs >> 2);
+    lhs ^= rhs + 0x9E3779B9 + (lhs << 6) + (lhs >> 2);
     return lhs;
 }
 

@@ -162,7 +162,7 @@ struct negate {
 
     template <class... Args>
     requires std::predicate<Predicate, Args...>
-    constexpr bool 
+    constexpr bool
     operator()(Args &&...args) const noexcept {
         return not std::invoke(_predicate, std::forward<Args>(args)...);
     }
@@ -192,7 +192,7 @@ struct compose {
     template <class... Args>
     requires std::predicate<PredicateA, Args...> and
         std::predicate<PredicateB, Args...>
-    constexpr bool 
+    constexpr bool
     operator()(Args &&...args) const noexcept {
         return _comp(std::invoke(_lhs, args...),
                      std::invoke(_rhs, args...));
@@ -318,7 +318,7 @@ struct compare {
 
     template <class T, class U>
     requires my::invocable_with_projection<BiPredicate, Projection, T, U>
-    constexpr bool 
+    constexpr bool
     operator()(const T &a, const U &b) const {
         return std::invoke(_pred,
                            std::invoke(_proj, a),
@@ -398,5 +398,24 @@ template <class... Ts>
 struct overload : Ts... { using Ts::operator()...; };
 template <class... Ts>
 overload(Ts...) -> overload<Ts...>;
+
+// clang-format off
+/**
+ * @brief Calls vararg amount of similar by signature functions in subsection.
+ * Can be used as a callback joiner e.g. to join multiple consumer-like callbacks
+ * into one.
+ *
+ * @tparam Funcs Similar by signature function types
+ * @param funcs Similar by signature functions
+ * @return anonymous lambda, that joins logic of all passed functions
+ */
+template <class... Funcs>
+consteval auto conflate(Funcs &&...funcs) {
+    return [...funcs = std::forward<Funcs>(funcs)]<class... Args> 
+        (Args && ...args) requires(std::invocable<Funcs, Args...> and ...) { 
+            (std::invoke(funcs, std::forward<Args>(args)...), ...); 
+        };
+}
+// clang-format on
 
 }  // namespace my

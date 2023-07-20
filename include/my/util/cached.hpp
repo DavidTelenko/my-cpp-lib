@@ -27,7 +27,7 @@ template <class Res, class... Args>
 class cached<Res(Args...)> {
    public:
     template <class Function>
-    constexpr explicit cached(Function func, size_t cacheLimit = 1000)
+    constexpr explicit cached(Function func, size_t cacheLimit = 1024)
         : _func(std::move(func)), _limit(cacheLimit) {
     }
 
