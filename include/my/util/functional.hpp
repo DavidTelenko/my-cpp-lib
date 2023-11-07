@@ -220,6 +220,54 @@ auto _or(PredA lhs, PredA rhs) {
 template <my::value PredA, my::value PredB>
 auto _nor(PredA lhs, PredA rhs) { return negate(_or(lhs, rhs)); }
 
+
+template <class P>
+struct Predicate {
+    constexpr explicit Predicate(P p) noexcept : _p(std::move(p)) {}
+
+    template <class... Args>
+        requires std::invocable<P, Args...>
+    constexpr auto operator()(Args&&... args) const -> bool {
+        return std::invoke(_p, std::forward<Args>(args)...);
+    }
+
+    constexpr auto operator!() const {
+        auto result = [this]<class... Args>
+            requires std::invocable<P, Args...>
+        (Args&&... args) -> bool {
+            return !((*this)(std::forward<Args>(args)...));
+        };
+        return Predicate<decltype(result)>(std::move(result));
+    }
+
+    template <class Other>
+    constexpr auto operator&&(Other&& other) const {
+        auto result = [this, other = std::forward<Other>(other)]<class... Args>
+            requires std::invocable<P, Args...> and
+                         std::invocable<Other, Args...>
+        (Args&&... args) -> bool {
+            return (*this)(std::forward<Args>(args)...) &&
+                   std::invoke(other, std::forward<Args>(args)...);
+        };
+        return Predicate<decltype(result)>(std::move(result));
+    }
+
+    template <class Other>
+    constexpr auto operator||(Other&& other) const {
+        auto result = [this, other = std::forward<Other>(other)]<class... Args>
+            requires std::invocable<P, Args...> and
+                         std::invocable<Other, Args...>
+        (Args&&... args) -> bool {
+            return (*this)(std::forward<Args>(args)...) ||
+                   std::invoke(other, std::forward<Args>(args)...);
+        };
+        return Predicate<decltype(result)>(std::move(result));
+    }
+
+   private:
+    P _p;
+};
+
 };  // namespace predicates
 
 template <class F, class P, class... Args>
