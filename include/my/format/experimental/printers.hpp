@@ -91,7 +91,7 @@ struct setFormat {
 };
 
 /**
- * @brief Convenience function for geenrating setFormat manipulator
+ * @brief Convenience function for generating setFormat manipulator
  *
  * @param format
  * @return constexpr auto

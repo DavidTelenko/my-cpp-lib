@@ -24,7 +24,7 @@ struct lambdaFrom {
     }
 
     template <class... Args>
-    requires std::is_invocable_v<Func, Args...>
+        requires std::is_invocable_v<Func, Args...>
     constexpr decltype(auto)
     operator()(Args &&...args) noexcept(
         std::is_nothrow_invocable_v<Func, Args...>) {
@@ -80,8 +80,8 @@ struct reducerFrom {
         : _func(std::move(func)) {}
 
     template <class Accum, class... Args>
-    requires std::invocable<Func, std::add_lvalue_reference_t<Accum>,
-                            Args...>
+        requires std::invocable<Func, std::add_lvalue_reference_t<Accum>,
+                                Args...>
     constexpr void
     operator()(Accum &accum, Args &&...args) const {
         (std::invoke(_func, accum, std::forward<Args>(args)), ...);
@@ -161,7 +161,7 @@ struct negate {
     }
 
     template <class... Args>
-    requires std::predicate<Predicate, Args...>
+        requires std::predicate<Predicate, Args...>
     constexpr bool
     operator()(Args &&...args) const noexcept {
         return not std::invoke(_predicate, std::forward<Args>(args)...);
@@ -190,8 +190,8 @@ struct compose {
     }
 
     template <class... Args>
-    requires std::predicate<PredicateA, Args...> and
-        std::predicate<PredicateB, Args...>
+        requires std::predicate<PredicateA, Args...> and
+                 std::predicate<PredicateB, Args...>
     constexpr bool
     operator()(Args &&...args) const noexcept {
         return _comp(std::invoke(_lhs, args...),
@@ -220,32 +220,31 @@ auto _or(PredA lhs, PredA rhs) {
 template <my::value PredA, my::value PredB>
 auto _nor(PredA lhs, PredA rhs) { return negate(_or(lhs, rhs)); }
 
-
 template <class P>
 struct Predicate {
     constexpr explicit Predicate(P p) noexcept : _p(std::move(p)) {}
 
     template <class... Args>
         requires std::invocable<P, Args...>
-    constexpr auto operator()(Args&&... args) const -> bool {
+    constexpr auto operator()(Args &&...args) const -> bool {
         return std::invoke(_p, std::forward<Args>(args)...);
     }
 
     constexpr auto operator!() const {
         auto result = [this]<class... Args>
             requires std::invocable<P, Args...>
-        (Args&&... args) -> bool {
+        (Args &&...args) -> bool {
             return !((*this)(std::forward<Args>(args)...));
         };
         return Predicate<decltype(result)>(std::move(result));
     }
 
     template <class Other>
-    constexpr auto operator&&(Other&& other) const {
+    constexpr auto operator&&(Other &&other) const {
         auto result = [this, other = std::forward<Other>(other)]<class... Args>
             requires std::invocable<P, Args...> and
                          std::invocable<Other, Args...>
-        (Args&&... args) -> bool {
+        (Args &&...args) -> bool {
             return (*this)(std::forward<Args>(args)...) &&
                    std::invoke(other, std::forward<Args>(args)...);
         };
@@ -253,11 +252,11 @@ struct Predicate {
     }
 
     template <class Other>
-    constexpr auto operator||(Other&& other) const {
+    constexpr auto operator||(Other &&other) const {
         auto result = [this, other = std::forward<Other>(other)]<class... Args>
             requires std::invocable<P, Args...> and
                          std::invocable<Other, Args...>
-        (Args&&... args) -> bool {
+        (Args &&...args) -> bool {
             return (*this)(std::forward<Args>(args)...) ||
                    std::invoke(other, std::forward<Args>(args)...);
         };
@@ -309,7 +308,7 @@ struct project {
     }
 
     template <class... Args>
-    requires invocable_with_projection<Func, Proj, Args...>
+        requires invocable_with_projection<Func, Proj, Args...>
     constexpr decltype(auto)
     operator()(Args &&...args) const noexcept {
         return std::invoke(_func, std::invoke(proj_,
@@ -365,7 +364,7 @@ struct compare {
     }
 
     template <class T, class U>
-    requires my::invocable_with_projection<BiPredicate, Projection, T, U>
+        requires my::invocable_with_projection<BiPredicate, Projection, T, U>
     constexpr bool
     operator()(const T &a, const U &b) const {
         return std::invoke(_pred,
@@ -443,7 +442,9 @@ constexpr auto compareProject(Projection p = {}) noexcept {
  * @tparam Ts
  */
 template <class... Ts>
-struct overload : Ts... { using Ts::operator()...; };
+struct overload : Ts... {
+    using Ts::operator()...;
+};
 template <class... Ts>
 overload(Ts...) -> overload<Ts...>;
 
