@@ -230,34 +230,34 @@ struct Predicate {
         return std::invoke(_p, std::forward<Args>(args)...);
     }
 
-    constexpr auto operator!() const {
+    constexpr auto operator not() const {
         auto result = [this]<class... Args>
             requires std::invocable<P, Args...>
         (Args &&...args) -> bool {
-            return !((*this)(std::forward<Args>(args)...));
+            return not ((*this)(std::forward<Args>(args)...));
         };
         return Predicate<decltype(result)>(std::move(result));
     }
 
     template <class Other>
-    constexpr auto operator&&(Other &&other) const {
+    constexpr auto operator and(Other &&other) const {
         auto result = [this, other = std::forward<Other>(other)]<class... Args>
             requires std::invocable<P, Args...> and
                          std::invocable<Other, Args...>
         (Args &&...args) -> bool {
-            return (*this)(std::forward<Args>(args)...) &&
+            return (*this)(std::forward<Args>(args)...) and
                    std::invoke(other, std::forward<Args>(args)...);
         };
         return Predicate<decltype(result)>(std::move(result));
     }
 
     template <class Other>
-    constexpr auto operator||(Other &&other) const {
+    constexpr auto operator or(Other &&other) const {
         auto result = [this, other = std::forward<Other>(other)]<class... Args>
             requires std::invocable<P, Args...> and
                          std::invocable<Other, Args...>
         (Args &&...args) -> bool {
-            return (*this)(std::forward<Args>(args)...) ||
+            return (*this)(std::forward<Args>(args)...) or
                    std::invoke(other, std::forward<Args>(args)...);
         };
         return Predicate<decltype(result)>(std::move(result));
@@ -386,14 +386,14 @@ struct compare {
     constexpr auto then(BiPred2 f, Proj2 p = {}) const {
         // clang-format off
         return my::compare(
-            [this, f, p]<class T, class U> 
+            [this, f, p]<class T, class U>
             requires my::invocable_with_projection<BiPred2, Proj2, T, U>
             (const T &a, const U &b) -> bool {
                 if ((*this)(a, b)) return true;
                 if ((*this)(b, a)) return false;
 
                 // a == b for primary condition, go to secondary
-                return std::invoke(f, std::invoke(p, a), 
+                return std::invoke(f, std::invoke(p, a),
                                       std::invoke(p, b));
             });
         // clang-format on
@@ -460,9 +460,9 @@ overload(Ts...) -> overload<Ts...>;
  */
 template <class... Funcs>
 consteval auto conflate(Funcs &&...funcs) {
-    return [...funcs = std::forward<Funcs>(funcs)]<class... Args> 
-        (Args && ...args) requires(std::invocable<Funcs, Args...> and ...) { 
-            (std::invoke(funcs, std::forward<Args>(args)...), ...); 
+    return [...funcs = std::forward<Funcs>(funcs)]<class... Args>
+        (Args && ...args) requires(std::invocable<Funcs, Args...> and ...) {
+            (std::invoke(funcs, std::forward<Args>(args)...), ...);
         };
 }
 // clang-format on
